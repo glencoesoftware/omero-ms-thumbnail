@@ -44,9 +44,13 @@ session.  As such it is essential that as a prerequisite to running the
 server that your OMERO.web instance be configured to use Redis backed sessions.
 Filesystem backed sessions **are not** supported.
 
+1. Configure the application::
+
+        cp conf.json.example path/to/conf.json
+
 1. Start the server::
 
-        ./omero-thumbnail --redis-password redispw --debug
+        omero-thumbnail -conf path/to/conf.json
 
 Redirecting OMERO.web to the Server
 ===================================

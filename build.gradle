@@ -7,7 +7,7 @@ plugins {
 group = 'com.glencoesoftware.tt'
 version = '0.1.0-SNAPSHOT'
 
-mainClassName = 'com.glencoesoftware.omero.ms.thumbnail.Main'
+mainClassName = 'io.vertx.core.Starter'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -84,6 +84,15 @@ dependencies {
     compile 'org.springframework:spring-core:3.0.1.RELEASE'
 
     testCompile 'org.testng:testng:6.10'
+}
+
+jar {
+    manifest {
+        attributes(
+            "Main-Class": mainClassName,
+            "Main-Verticle": "com.glencoesoftware.omero.ms.thumbnail.ThumbnailVerticle"
+        )
+    }
 }
 
 test {

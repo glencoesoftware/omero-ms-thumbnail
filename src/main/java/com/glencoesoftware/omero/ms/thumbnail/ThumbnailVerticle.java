@@ -24,9 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
 import org.perf4j.StopWatch;
 import org.perf4j.slf4j.Slf4JStopWatch;
 import org.slf4j.LoggerFactory;
@@ -37,11 +34,13 @@ import com.glencoesoftware.omero.ms.core.OmeroWebRedisSessionStore;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
-import io.vertx.core.Vertx;
+import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.CookieHandler;
@@ -59,59 +58,24 @@ import static omero.rtypes.unwrap;
  * @author Chris Allan <callan@glencoesoftware.com>
  *
  */
-public class Main {
+public class ThumbnailVerticle extends AbstractVerticle {
 
     private static final org.slf4j.Logger log =
-        LoggerFactory.getLogger(Main.class);
+        LoggerFactory.getLogger(ThumbnailVerticle.class);
   
-    @Option(name="--debug", usage="enable debugging")
-    private boolean debug;
-
-    @Option(name="-s", aliases="--server", usage="OMERO server hostname")
-    private String omeroServer = "localhost";
-
-    @Option(name="-p", aliases="--port", usage="OMERO server port")
-    private int omeroPort = 4064;
- 
-    @Option(name="--redis-db", usage="Redis server database number")
-    private int redisDb = 1;
-
-    @Option(name="--redis-host", usage="Redis server hostname")
-    private String redisHost = "localhost";
-
-    @Option(name="--redis-port", usage="Redis server port")
-    private int redisPort = 6379;
-
-    @Option(name="--redis-password", usage="Redis server password")
-    private String redisPassword;
-
-    public static void main(String args[]) throws Exception {
-        new Main().go(args);
-    }
-
     /**
      * Entry point method which starts the server event loop.
      * @param args Command line arguments.
      */
-    public void go(String args[]) {
-        CmdLineParser parser = new CmdLineParser(this);
-        try {
-            parser.parseArgument(args);
-        } catch (CmdLineException e) {
-            System.err.println(e.getMessage());
-            System.err.println("omero-thumbnail [options...] arguments...");
-            parser.printUsage(System.err);
-            System.err.println();
-            return;
-        }
+    @Override
+    public void start(Future<Void> future) {
 
-        if (debug) {
+        if (config().getBoolean("debug")) {
             Logger root =
                 (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
             root.setLevel(Level.DEBUG);
         }
 
-        Vertx vertx = Vertx.vertx();
         HttpServer server = vertx.createHttpServer();
         Router router = Router.router(vertx);
 
@@ -120,10 +84,15 @@ public class Main {
 
         // OMERO session handler which picks up the session key from the
         // OMERO.web session and joins it.
+        JsonObject omero = config().getJsonObject("omero");
+        JsonObject redis = config().getJsonObject("redis");
         router.route().blockingHandler(new OmeroSessionHandler(
-                omeroServer, omeroPort,
+                omero.getString("server"), omero.getInteger("port"),
                 new OmeroWebRedisSessionStore(
-                        redisHost, redisPort, redisPassword, redisDb)));
+                        redis.getString("host"),
+                        redis.getInteger("port"),
+                        redis.getString("password"),
+                        redis.getInteger("db"))));
 
         // Thumbnail request handlers
         router.get(
@@ -135,7 +104,14 @@ public class Main {
         router.route().blockingHandler(new OmeroSessionCleanupHandler());
 
         log.info("Starting server...");
-        server.requestHandler(router::accept).listen(8080);
+        server.requestHandler(router::accept)
+            .listen(config().getInteger("port"), result -> {
+                if (result.succeeded()) {
+                    future.complete();
+                } else {
+                    future.fail(result.cause());
+                }
+            });
     }
 
     /**
