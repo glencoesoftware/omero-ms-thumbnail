@@ -97,7 +97,7 @@ public class ThumbnailVerticle extends AbstractVerticle {
         // Thumbnail request handlers
         router.get(
                 "/webclient/render_thumbnail/size/:longestSide/:imageId")
-            .blockingHandler(this::renderThumbnail);
+            .handler(this::renderThumbnail);
 
         // OMERO session cleanup handler which ensures that closeSession() is
         // called on the current session.
@@ -123,36 +123,38 @@ public class ThumbnailVerticle extends AbstractVerticle {
      */
     private void renderThumbnail(RoutingContext event) {
         HttpServerRequest request = event.request();
-        String longestSide = request.getParam("longestSide");
-        if (longestSide == null) {
-            longestSide = "96";
-        }
-        Long imageId = Long.parseLong(request.getParam("imageId"));
-
+        final String longestSide =
+                request.getParam("longestSide") == null? "96"
+                        : request.getParam("longestSide");
+        final Long imageId = Long.parseLong(request.getParam("imageId"));
         final HttpServerResponse response = event.response();
-        Buffer thumbnail = null;
-        omero.client client = event.get("omero.client");
-        try {
-            Image image = getImage(client, imageId);
-            if (image == null) {
-                return;
+        final omero.client client = event.get("omero.client");
+        vertx.executeBlocking(future -> {
+            try {
+                Image image = getImage(client, imageId);
+                if (image == null) {
+                    future.complete(null);
+                    return;
+                }
+                future.complete(Buffer.buffer(getThumbnail(
+                        client, image, Integer.parseInt(longestSide))));
+            } catch (ServerError e) {
+                log.error("Exception while retrieving thumbnail", e);
+                future.complete(null);
             }
-            thumbnail = Buffer.buffer(getThumbnail(
-                    client, image, Integer.parseInt(longestSide)));
-        } catch (Exception e) {
-            log.error("Exception while retrieving thumbnail", e);
-        }
+        }, result -> {
+            Buffer thumbnail = (Buffer) result.result();
+            if (thumbnail == null) {
+                response.setStatusCode(404);
+            } else {
+                response.headers().set("Content-Type", "image/jpeg");
+                response.headers().set(
+                        "Content-Length", String.valueOf(thumbnail.length()));
+                response.write(thumbnail);
+            }
+            response.end();
+        });
 
-        response.headers().set("Content-Type", "image/jpeg");
-        if (thumbnail == null) {
-            response.setStatusCode(404);
-        } else {
-            response.headers().set(
-                    "Content-Length",
-                    String.valueOf(thumbnail.length()));
-            response.write(thumbnail);
-        }
-        response.end();
         event.next();
     }
 
