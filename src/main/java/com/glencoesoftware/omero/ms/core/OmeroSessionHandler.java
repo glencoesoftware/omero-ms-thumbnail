@@ -22,9 +22,13 @@ import org.perf4j.StopWatch;
 import org.perf4j.slf4j.Slf4JStopWatch;
 import org.slf4j.LoggerFactory;
 
+import Glacier2.CannotCreateSessionException;
+import Glacier2.PermissionDeniedException;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.Cookie;
 import io.vertx.ext.web.RoutingContext;
+import omero.ServerError;
+import omero.api.ServiceFactoryPrx;
 
 /**
  * OMERO session handler which ensures that a valid session is available for
@@ -86,10 +90,29 @@ public class OmeroSessionHandler implements Handler<RoutingContext> {
                 String omeroSessionKey = connector.getOmeroSessionKey();
                 event.put("omero.session_key", omeroSessionKey);
                 client = new omero.client(host, port);
-                client.joinSession(omeroSessionKey).detachOnDestroy();
-                log.debug("Successfully joined session: {}", omeroSessionKey);
-                event.put("omero.client", client);
-                event.next();
+                event.vertx().executeBlocking(future -> {
+                    ServiceFactoryPrx sf = null;
+                    try {
+                        sf = client.joinSession(omeroSessionKey);
+                        sf.detachOnDestroy();
+                        log.debug(
+                                "Successfully joined session: {}",
+                                omeroSessionKey);
+                    } catch (CannotCreateSessionException
+                             | PermissionDeniedException e) {
+                        log.info("Unable to join session: {}", omeroSessionKey);
+                    } catch (Exception e) {
+                        log.error(
+                            "Unexpected exception while joining session", e);
+                    }
+                    future.complete(sf);
+                }, result -> {
+                    ServiceFactoryPrx sf = (ServiceFactoryPrx) result.result();
+                    if (sf != null) {
+                        event.put("omero.client", client);
+                    }
+                    event.next();
+                });
             } finally {
                 t0.stop();
             }

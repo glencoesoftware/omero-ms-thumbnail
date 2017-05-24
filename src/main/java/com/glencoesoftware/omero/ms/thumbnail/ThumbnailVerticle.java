@@ -86,7 +86,7 @@ public class ThumbnailVerticle extends AbstractVerticle {
         // OMERO.web session and joins it.
         JsonObject omero = config().getJsonObject("omero");
         JsonObject redis = config().getJsonObject("redis");
-        router.route().blockingHandler(new OmeroSessionHandler(
+        router.route().handler(new OmeroSessionHandler(
                 omero.getString("server"), omero.getInteger("port"),
                 new OmeroWebRedisSessionStore(
                         redis.getString("host"),
@@ -101,7 +101,7 @@ public class ThumbnailVerticle extends AbstractVerticle {
 
         // OMERO session cleanup handler which ensures that closeSession() is
         // called on the current session.
-        router.route().blockingHandler(new OmeroSessionCleanupHandler());
+        router.route().handler(new OmeroSessionCleanupHandler());
 
         log.info("Starting server...");
         server.requestHandler(router::accept)
@@ -133,12 +133,13 @@ public class ThumbnailVerticle extends AbstractVerticle {
             try {
                 Image image = getImage(client, imageId);
                 if (image == null) {
+                    log.debug("Cannot find Image:{}", imageId);
                     future.complete(null);
                     return;
                 }
                 future.complete(Buffer.buffer(getThumbnail(
                         client, image, Integer.parseInt(longestSide))));
-            } catch (ServerError e) {
+            } catch (Exception e) {
                 log.error("Exception while retrieving thumbnail", e);
                 future.complete(null);
             }
@@ -153,9 +154,8 @@ public class ThumbnailVerticle extends AbstractVerticle {
                 response.write(thumbnail);
             }
             response.end();
+            event.next();
         });
-
-        event.next();
     }
 
     /**

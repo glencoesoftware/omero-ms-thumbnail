@@ -40,12 +40,22 @@ public class OmeroSessionCleanupHandler implements Handler<RoutingContext> {
     public void handle(RoutingContext event) {
         String omeroSessionKey = event.get("omero.session_key");
         omero.client client = event.get("omero.client");
-        try {
-            client.closeSession();
-            log.debug("Successfully closed session: {}", omeroSessionKey);
-        } catch (Exception e) {
-            log.error("Exception while closing session", e);
-        }
+        event.vertx().executeBlocking(future -> {
+            try {
+                client.closeSession();
+                future.complete(true);
+            } catch (Exception e) {
+                future.complete(false);
+                log.error("Exception while closing session", e);
+            }
+        }, result -> {
+            Boolean success = (Boolean) result.result();
+            if (success) {
+                log.debug("Successfully closed session: {}", omeroSessionKey);
+            } else {
+                log.error("Failed to close session: {}", omeroSessionKey);
+            }
+        });
     }
 
 }
