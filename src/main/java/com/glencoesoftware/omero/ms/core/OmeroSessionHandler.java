@@ -67,6 +67,11 @@ public class OmeroSessionHandler implements Handler<RoutingContext> {
     public void handle(RoutingContext event) {
         try {
             Cookie cookie = event.getCookie("sessionid");
+            if (cookie == null) {
+                event.response().setStatusCode(403);
+                event.response().end();
+                return;
+            }
             IConnector connector = sessionStore.getConnector(cookie.getValue());
 
             StopWatch t0 = new Slf4JStopWatch("joinSession");
