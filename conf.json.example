@@ -2,7 +2,7 @@
     "debug": true,
     "port": 8080,
     "omero": {
-        "server": "localhost",
+        "host": "localhost",
         "port": 4064
     },
     "redis": {

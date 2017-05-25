@@ -28,19 +28,21 @@ import org.perf4j.StopWatch;
 import org.perf4j.slf4j.Slf4JStopWatch;
 import org.slf4j.LoggerFactory;
 
-import com.glencoesoftware.omero.ms.core.OmeroSessionCleanupHandler;
-import com.glencoesoftware.omero.ms.core.OmeroSessionHandler;
+import com.glencoesoftware.omero.ms.core.IConnector;
+import com.glencoesoftware.omero.ms.core.OmeroSessionVerticle;
 import com.glencoesoftware.omero.ms.core.OmeroWebRedisSessionStore;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.web.Cookie;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.CookieHandler;
@@ -69,12 +71,19 @@ public class ThumbnailVerticle extends AbstractVerticle {
      */
     @Override
     public void start(Future<Void> future) {
+        log.info("Starting verticle...");
 
         if (config().getBoolean("debug")) {
             Logger root = (Logger) LoggerFactory.getLogger(
                     "com.glencoesoftware.omero.ms");
             root.setLevel(Level.DEBUG);
         }
+
+        // Deploy our dependency verticles
+        JsonObject omero = config().getJsonObject("omero");
+        vertx.deployVerticle(new OmeroSessionVerticle(
+                omero.getString("host"), omero.getInteger("port")),
+                new DeploymentOptions().setWorker(true));
 
         HttpServer server = vertx.createHttpServer();
         Router router = Router.router(vertx);
@@ -84,30 +93,36 @@ public class ThumbnailVerticle extends AbstractVerticle {
 
         // OMERO session handler which picks up the session key from the
         // OMERO.web session and joins it.
-        JsonObject omero = config().getJsonObject("omero");
         JsonObject redis = config().getJsonObject("redis");
-        router.route().handler(new OmeroSessionHandler(
-                omero.getString("server"), omero.getInteger("port"),
-                new OmeroWebRedisSessionStore(redis.getString("uri"))));
+        final OmeroWebRedisSessionStore sessionStore =
+                new OmeroWebRedisSessionStore(redis.getString("uri"));
+        router.route().handler(event -> {
+            Cookie cookie = event.getCookie("sessionid");
+            if (cookie == null) {
+                event.response().setStatusCode(403);
+                event.response().end();
+            }
+            IConnector connector = sessionStore.getConnector(cookie.getValue());
+            if (connector != null) {
+                event.put("omero.session_key", connector.getOmeroSessionKey());
+            }
+            event.next();
+        });
 
         // Thumbnail request handlers
         router.get(
                 "/webclient/render_thumbnail/size/:longestSide/:imageId")
             .handler(this::renderThumbnail);
 
-        // OMERO session cleanup handler which ensures that closeSession() is
-        // called on the current session.
-        router.route().handler(new OmeroSessionCleanupHandler());
-
-        log.info("Starting server...");
-        server.requestHandler(router::accept)
-            .listen(config().getInteger("port"), result -> {
-                if (result.succeeded()) {
-                    future.complete();
-                } else {
-                    future.fail(result.cause());
-                }
-            });
+        int port = config().getInteger("port");
+        log.info("Starting HTTP server *:{}...", port);
+        server.requestHandler(router::accept).listen(port, result -> {
+            if (result.succeeded()) {
+                future.complete();
+            } else {
+                future.fail(result.cause());
+            }
+        });
     }
 
     /**
@@ -124,33 +139,55 @@ public class ThumbnailVerticle extends AbstractVerticle {
                         : request.getParam("longestSide");
         final Long imageId = Long.parseLong(request.getParam("imageId"));
         final HttpServerResponse response = event.response();
-        final omero.client client = event.get("omero.client");
-        vertx.executeBlocking(future -> {
+
+        vertx.eventBus().send(
+                "omero.join_session",
+                event.get("omero.session_key"), result -> {
+            final omero.client client = (omero.client) result.result();
             try {
-                Image image = getImage(client, imageId);
-                if (image == null) {
-                    log.debug("Cannot find Image:{}", imageId);
-                    future.complete(null);
+                if (result.failed()) {
+                    response.setStatusCode(404);
+                    response.end();
                     return;
                 }
-                future.complete(Buffer.buffer(getThumbnail(
-                        client, image, Integer.parseInt(longestSide))));
-            } catch (Exception e) {
-                log.error("Exception while retrieving thumbnail", e);
-                future.complete(null);
+                vertx.executeBlocking(future -> {
+                    try {
+                        Image image = getImage(client, imageId);
+                        if (image == null) {
+                            log.debug("Cannot find Image:{}", imageId);
+                            future.complete(null);
+                            return;
+                        }
+                        future.complete(Buffer.buffer(getThumbnail(
+                                client, image, Integer.parseInt(longestSide))));
+                    } catch (Exception e) {
+                        log.error("Exception while retrieving thumbnail", e);
+                        future.complete(null);
+                    }
+                }, blockingResult -> {
+                    Buffer thumbnail = (Buffer) blockingResult.result();
+                    if (thumbnail == null) {
+                        response.setStatusCode(404);
+                    } else {
+                        response.headers().set("Content-Type", "image/jpeg");
+                        response.headers().set(
+                                "Content-Length",
+                                String.valueOf(thumbnail.length()));
+                        response.write(thumbnail);
+                    }
+                    response.end();
+                    event.next();
+                });
+            } finally {
+                StopWatch t0 = new Slf4JStopWatch("closeSession");
+                try {
+                    if (client != null) {
+                        client.closeSession();
+                    }
+                } finally {
+                    t0.stop();
+                }
             }
-        }, result -> {
-            Buffer thumbnail = (Buffer) result.result();
-            if (thumbnail == null) {
-                response.setStatusCode(404);
-            } else {
-                response.headers().set("Content-Type", "image/jpeg");
-                response.headers().set(
-                        "Content-Length", String.valueOf(thumbnail.length()));
-                response.write(thumbnail);
-            }
-            response.end();
-            event.next();
         });
     }
 
