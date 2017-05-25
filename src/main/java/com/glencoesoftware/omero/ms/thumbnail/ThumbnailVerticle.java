@@ -71,8 +71,8 @@ public class ThumbnailVerticle extends AbstractVerticle {
     public void start(Future<Void> future) {
 
         if (config().getBoolean("debug")) {
-            Logger root =
-                (Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
+            Logger root = (Logger) LoggerFactory.getLogger(
+                    "com.glencoesoftware.omero.ms");
             root.setLevel(Level.DEBUG);
         }
 
