@@ -26,7 +26,10 @@ import org.python.core.util.StringUtil;
 import org.python.modules.cPickle;
 import org.slf4j.LoggerFactory;
 
-import redis.clients.jedis.Jedis;
+import com.lambdaworks.redis.RedisClient;
+import com.lambdaworks.redis.api.StatefulRedisConnection;
+import com.lambdaworks.redis.api.sync.RedisCommands;
+import com.lambdaworks.redis.codec.ByteArrayCodec;
 
 /**
  * A Redis backed OMERO.web session store. Based on a provided session key,
@@ -46,53 +49,34 @@ public class OmeroWebRedisSessionStore implements OmeroWebSessionStore {
     private static final org.slf4j.Logger log =
             LoggerFactory.getLogger(OmeroWebRedisSessionStore.class);
 
-    /** Redis server host */
-    private final String host;
-
-    /** Redis server port */
-    private final int port;
-
-    /** Redis server password. */
-    private final String password;
-
-    /** Redis server database index. */
-    private final int dbIndex;
+    /** Redis connection URI */
+    private final RedisClient redisClient;
 
     /**
      * Default constructor.
-     * @param host Redis server host.
-     * @param port Redis server port.
-     * @param password Redis server password.
-     * @param dbIndex Redis server database index.
+     * @param uri Redis connection URI.
      */
-    public OmeroWebRedisSessionStore(
-            String host, int port, String password, int dbIndex) {
-        this.host = host;
-        this.port = port;
-        this.password = password;
-        this.dbIndex = dbIndex;
+    public OmeroWebRedisSessionStore(String uri) {
+        redisClient = RedisClient.create(uri);
     }
 
     /* (non-Javadoc)
      * @see com.glencoesoftware.omero.ms.core.OmeroWebSessionStore#getConnector(java.lang.String)
      */
     public IConnector getConnector(String sessionKey) {
-        byte[] pickledDjangoSession = null;
         StopWatch t0 = new Slf4JStopWatch("getConnector");
         try {
-            try (Jedis jedis = new Jedis(host, port)) {
-                if (password != null) {
-                    jedis.auth(password);
-                }
-                jedis.select(dbIndex);
-
+            byte[] pickledDjangoSession = null;
+            try (StatefulRedisConnection<byte[], byte[]> connection =
+                    redisClient.connect(new ByteArrayCodec())) {
+                RedisCommands<byte[], byte[]> syncCommands = connection.sync();
                 String key = String.format(
                         KEY_FORMAT,
                         "",  // OMERO_WEB_CACHE_KEY_PREFIX
                         1,  // OMERO_WEB_CACHE_VERSION
                         sessionKey);
                 // Binary retrieval, get(String) includes a UTF-8 step
-                pickledDjangoSession = jedis.get(key.getBytes());
+                pickledDjangoSession = syncCommands.get(key.getBytes());
                 if (pickledDjangoSession == null) {
                     return null;
                 }

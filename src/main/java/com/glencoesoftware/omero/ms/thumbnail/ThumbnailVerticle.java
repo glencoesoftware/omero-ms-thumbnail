@@ -88,11 +88,7 @@ public class ThumbnailVerticle extends AbstractVerticle {
         JsonObject redis = config().getJsonObject("redis");
         router.route().handler(new OmeroSessionHandler(
                 omero.getString("server"), omero.getInteger("port"),
-                new OmeroWebRedisSessionStore(
-                        redis.getString("host"),
-                        redis.getInteger("port"),
-                        redis.getString("password"),
-                        redis.getInteger("db"))));
+                new OmeroWebRedisSessionStore(redis.getString("uri"))));
 
         // Thumbnail request handlers
         router.get(

@@ -75,9 +75,9 @@ configurations.all {
 
 dependencies {
     compile 'args4j:args4j:2.33'
+    compile 'biz.paluch.redis:lettuce:4.3.2.Final'
     compile 'ch.qos.logback:logback-classic:1.1.7'
     compile 'io.vertx:vertx-web:3.4.1'
-    compile 'redis.clients:jedis:2.9.0'
     compile 'omero:blitz:5.2.6-ice35-b35'
     compile 'org.perf4j:perf4j:0.9.16'
     compile 'org.python:jython-standalone:2.7.0'
