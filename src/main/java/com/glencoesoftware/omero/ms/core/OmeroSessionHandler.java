@@ -27,7 +27,6 @@ import Glacier2.PermissionDeniedException;
 import io.vertx.core.Handler;
 import io.vertx.ext.web.Cookie;
 import io.vertx.ext.web.RoutingContext;
-import omero.ServerError;
 import omero.api.ServiceFactoryPrx;
 
 /**
