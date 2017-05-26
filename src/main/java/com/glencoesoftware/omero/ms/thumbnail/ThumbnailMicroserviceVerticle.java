@@ -32,6 +32,7 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Future;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
@@ -136,12 +137,17 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         vertx.eventBus().send(
                 "omero.render_thumbnail",
                 Json.encode(data), result -> {
-            final byte[] thumbnail = (byte[]) result.result().body();
             try {
-                if (result.failed() || thumbnail == null) {
-                    response.setStatusCode(404);
+                if (result.failed()) {
+                    Throwable t = result.cause();
+                    int statusCode = 404;
+                    if (t instanceof ReplyException) {
+                        statusCode = ((ReplyException) t).failureCode();
+                    }
+                    response.setStatusCode(statusCode);
                     return;
                 }
+                byte[] thumbnail = (byte[]) result.result().body();
                 response.headers().set("Content-Type", "image/jpeg");
                 response.headers().set(
                         "Content-Length",
