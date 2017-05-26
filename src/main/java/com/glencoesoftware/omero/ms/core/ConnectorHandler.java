@@ -18,26 +18,14 @@
 
 package com.glencoesoftware.omero.ms.core;
 
+
 /**
- * An OMERO.web session store.
+ * OMERO.web Connector handler.
  * @author Chris Allan <callan@glencoesoftware.com>
  *
  */
-public interface OmeroWebSessionStore {
+public interface ConnectorHandler {
 
-    /**
-     * Retrieve the OMERO.web session's current
-     * <code>omeroweb.connector.Connector</code> synchronously.
-     * @param sessionKey Session key to retrieve a connector for.
-     * @return Connector instance or <code>null</code> if session lookup fails.
-     */
-    IConnector getConnector(String sessionKey);
+    void handle(IConnector connector);
 
-    /**
-     * Retrieve the OMERO.web session's current
-     * <code>omeroweb.connector.Connector</code>.
-     * @param sessionKey Session key to retrieve a connector for.
-     * @param handler Handler that is executed with the retrieved connector.
-     */
-    void getConnectorAsync(String sessionKey, ConnectorHandler handler);
 }

@@ -18,6 +18,9 @@
 
 package com.glencoesoftware.omero.ms.core;
 
+import java.io.Closeable;
+import java.io.IOException;
+
 import org.perf4j.StopWatch;
 import org.perf4j.slf4j.Slf4JStopWatch;
 import org.python.core.Py;
@@ -27,7 +30,9 @@ import org.python.modules.cPickle;
 import org.slf4j.LoggerFactory;
 
 import com.lambdaworks.redis.RedisClient;
+import com.lambdaworks.redis.RedisFuture;
 import com.lambdaworks.redis.api.StatefulRedisConnection;
+import com.lambdaworks.redis.api.async.RedisAsyncCommands;
 import com.lambdaworks.redis.api.sync.RedisCommands;
 import com.lambdaworks.redis.codec.ByteArrayCodec;
 
@@ -38,7 +43,8 @@ import com.lambdaworks.redis.codec.ByteArrayCodec;
  * @author Chris Allan <callan@glencoesoftware.com>
  *
  */
-public class OmeroWebRedisSessionStore implements OmeroWebSessionStore {
+public class OmeroWebRedisSessionStore
+        implements OmeroWebSessionStore, Closeable {
 
     /**
      * Django cache session storage engine key format.
@@ -49,15 +55,19 @@ public class OmeroWebRedisSessionStore implements OmeroWebSessionStore {
     private static final org.slf4j.Logger log =
             LoggerFactory.getLogger(OmeroWebRedisSessionStore.class);
 
-    /** Redis connection URI */
-    private final RedisClient redisClient;
+    /** Redis client */
+    private final RedisClient client;
+
+    /** Redis connection */
+    private final StatefulRedisConnection<byte[], byte[]> connection;
 
     /**
      * Default constructor.
      * @param uri Redis connection URI.
      */
     public OmeroWebRedisSessionStore(String uri) {
-        redisClient = RedisClient.create(uri);
+        client = RedisClient.create(uri);
+        connection = client.connect(new ByteArrayCodec());
     }
 
     /* (non-Javadoc)
@@ -67,19 +77,16 @@ public class OmeroWebRedisSessionStore implements OmeroWebSessionStore {
         StopWatch t0 = new Slf4JStopWatch("getConnector");
         try {
             byte[] pickledDjangoSession = null;
-            try (StatefulRedisConnection<byte[], byte[]> connection =
-                    redisClient.connect(new ByteArrayCodec())) {
-                RedisCommands<byte[], byte[]> syncCommands = connection.sync();
-                String key = String.format(
-                        KEY_FORMAT,
-                        "",  // OMERO_WEB_CACHE_KEY_PREFIX
-                        1,  // OMERO_WEB_CACHE_VERSION
-                        sessionKey);
-                // Binary retrieval, get(String) includes a UTF-8 step
-                pickledDjangoSession = syncCommands.get(key.getBytes());
-                if (pickledDjangoSession == null) {
-                    return null;
-                }
+            RedisCommands<byte[], byte[]> commands = connection.sync();
+            String key = String.format(
+                    KEY_FORMAT,
+                    "",  // OMERO_WEB_CACHE_KEY_PREFIX
+                    1,  // OMERO_WEB_CACHE_VERSION
+                    sessionKey);
+            // Binary retrieval, get(String) includes a UTF-8 step
+            pickledDjangoSession = commands.get(key.getBytes());
+            if (pickledDjangoSession == null) {
+                return null;
             }
 
             PyDictionary djangoSession = (PyDictionary) cPickle.loads(
@@ -89,6 +96,44 @@ public class OmeroWebRedisSessionStore implements OmeroWebSessionStore {
         } finally {
             t0.stop();
         }
+    }
+
+    /* (non-Javadoc)
+     * @see com.glencoesoftware.omero.ms.core.OmeroWebSessionStore#getConnectorAsync(java.lang.String, com.glencoesoftware.omero.ms.core.ConnectorHandler)
+     */
+    public void getConnectorAsync(String sessionKey, ConnectorHandler handler) {
+        RedisAsyncCommands<byte[], byte[]> commands = connection.async();
+        String key = String.format(
+                KEY_FORMAT,
+                "",  // OMERO_WEB_CACHE_KEY_PREFIX
+                1,  // OMERO_WEB_CACHE_VERSION
+                sessionKey);
+        log.debug("Retrieving OMERO.web session with key: {}", key);
+
+        final StopWatch t0 = new Slf4JStopWatch("getConnector");
+        // Binary retrieval, get(String) includes a UTF-8 step
+        RedisFuture<byte[]> future = commands.get(key.getBytes());
+        future.thenAccept(value -> {
+            try {
+                if (value == null) {
+                    handler.handle(null);
+                    return;
+                }
+                PyDictionary djangoSession =
+                        (PyDictionary) cPickle.loads(
+                                Py.newString(StringUtil.fromBytes(value)));
+                handler.handle((IConnector) djangoSession.get("connector"));
+            } catch (Exception e) {
+                log.error("Exception while unpickling connector", e);
+            } finally {
+                t0.stop();
+            }
+        });
+    }
+
+    @Override
+    public void close() throws IOException {
+        connection.close();
     }
 
 }

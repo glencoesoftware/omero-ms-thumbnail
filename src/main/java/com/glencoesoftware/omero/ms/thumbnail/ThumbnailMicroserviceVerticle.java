@@ -23,7 +23,6 @@ import java.util.Map;
 
 import org.slf4j.LoggerFactory;
 
-import com.glencoesoftware.omero.ms.core.IConnector;
 import com.glencoesoftware.omero.ms.core.OmeroWebRedisSessionStore;
 
 import ch.qos.logback.classic.Level;
@@ -54,7 +53,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
     private static final org.slf4j.Logger log =
         LoggerFactory.getLogger(ThumbnailVerticle.class);
-  
+
+    private OmeroWebRedisSessionStore sessionStore;
+
     /**
      * Entry point method which starts the server event loop.
      * @param args Command line arguments.
@@ -84,19 +85,22 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         // OMERO session handler which picks up the session key from the
         // OMERO.web session and joins it.
         JsonObject redis = config().getJsonObject("redis");
-        final OmeroWebRedisSessionStore sessionStore =
-                new OmeroWebRedisSessionStore(redis.getString("uri"));
+        sessionStore = new OmeroWebRedisSessionStore(redis.getString("uri"));
         router.route().handler(event -> {
             Cookie cookie = event.getCookie("sessionid");
             if (cookie == null) {
                 event.response().setStatusCode(403);
                 event.response().end();
             }
-            IConnector connector = sessionStore.getConnector(cookie.getValue());
-            if (connector != null) {
-                event.put("omero.session_key", connector.getOmeroSessionKey());
-            }
-            event.next();
+            String sessionKey = cookie.getValue();
+            log.debug("OMERO.web session key: {}", sessionKey);
+            sessionStore.getConnectorAsync(sessionKey, connector -> {
+                if (connector != null) {
+                    event.put(
+                        "omero.session_key", connector.getOmeroSessionKey());
+                }
+                event.next();
+            });
         });
 
         // Thumbnail request handlers
@@ -113,6 +117,11 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                 future.fail(result.cause());
             }
         });
+    }
+
+    @Override
+    public void stop() throws Exception {
+        sessionStore.close();
     }
 
     /**

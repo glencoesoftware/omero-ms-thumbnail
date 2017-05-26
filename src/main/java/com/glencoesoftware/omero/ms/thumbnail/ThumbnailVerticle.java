@@ -25,7 +25,6 @@ import com.glencoesoftware.omero.ms.core.OmeroRequest;
 import Glacier2.CannotCreateSessionException;
 import Glacier2.PermissionDeniedException;
 import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
 
 /**
@@ -55,7 +54,7 @@ public class ThumbnailVerticle extends AbstractVerticle {
     }
 
     @Override
-    public void start(Future<Void> future) {
+    public void start() {
         log.info("Starting verticle");
 
         vertx.eventBus().<String>consumer("omero.render_thumbnail", message -> {
@@ -83,8 +82,6 @@ public class ThumbnailVerticle extends AbstractVerticle {
                 message.fail(500, v);
             }
         });
-
-        future.complete();
     }
 
 }
