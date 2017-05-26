@@ -73,7 +73,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         JsonObject omero = config().getJsonObject("omero");
         vertx.deployVerticle(new ThumbnailVerticle(
                 omero.getString("host"), omero.getInteger("port")),
-                new DeploymentOptions().setWorker(true));
+                new DeploymentOptions().setWorker(true).setMultiThreaded(true));
 
         HttpServer server = vertx.createHttpServer();
         Router router = Router.router(vertx);
