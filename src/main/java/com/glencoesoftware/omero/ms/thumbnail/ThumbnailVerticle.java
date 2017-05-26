@@ -79,7 +79,7 @@ public class ThumbnailVerticle extends AbstractVerticle {
                 message.fail(403, v);
             } catch (Exception e) {
                 String v = "Exception while retrieving thumbnail";
-                log.error(v);
+                log.error(v, e);
                 message.fail(500, v);
             }
         });
