@@ -63,6 +63,9 @@ public class ThumbnailVerticle extends AbstractVerticle {
             String omeroSessionKey = data.getString("omeroSessionKey");
             int longestSide = data.getInteger("longestSide");
             long imageId = data.getLong("imageId");
+            log.debug(
+                "Render thumbnail request Image:{} longest side {}",
+                imageId, longestSide);
 
             try (OmeroRequest<byte[]> request = new OmeroRequest<byte[]>(
                      host, port, omeroSessionKey)) {
@@ -71,9 +74,13 @@ public class ThumbnailVerticle extends AbstractVerticle {
                 message.reply(thumbnail);
             } catch (PermissionDeniedException
                      | CannotCreateSessionException e) {
-                message.fail(403, "Permission denied");
+                String v = "Permission denied";
+                log.debug(v);
+                message.fail(403, v);
             } catch (Exception e) {
-                message.fail(500, "Exception while retrieving thumbnail");
+                String v = "Exception while retrieving thumbnail";
+                log.error(v);
+                message.fail(500, v);
             }
         });
 
