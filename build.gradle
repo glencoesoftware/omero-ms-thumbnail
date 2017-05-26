@@ -90,7 +90,7 @@ jar {
     manifest {
         attributes(
             "Main-Class": mainClassName,
-            "Main-Verticle": "com.glencoesoftware.omero.ms.thumbnail.ThumbnailVerticle"
+            "Main-Verticle": "com.glencoesoftware.omero.ms.thumbnail.ThumbnailMicroserviceVerticle"
         )
     }
 }
