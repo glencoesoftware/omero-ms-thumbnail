@@ -24,6 +24,7 @@ import java.util.Map;
 import org.slf4j.LoggerFactory;
 
 import com.glencoesoftware.omero.ms.core.OmeroWebRedisSessionStore;
+import com.glencoesoftware.omero.ms.core.OmeroWebSessionStore;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -54,7 +55,8 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     private static final org.slf4j.Logger log =
         LoggerFactory.getLogger(ThumbnailVerticle.class);
 
-    private OmeroWebRedisSessionStore sessionStore;
+    /** OMERO.web session store */
+    private OmeroWebSessionStore sessionStore;
 
     /**
      * Entry point method which starts the server event loop.

@@ -18,7 +18,6 @@
 
 package com.glencoesoftware.omero.ms.core;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.CompletionStage;
 
@@ -44,8 +43,7 @@ import com.lambdaworks.redis.codec.ByteArrayCodec;
  * @author Chris Allan <callan@glencoesoftware.com>
  *
  */
-public class OmeroWebRedisSessionStore
-        implements OmeroWebSessionStore, Closeable {
+public class OmeroWebRedisSessionStore implements OmeroWebSessionStore {
 
     /**
      * Django cache session storage engine key format.

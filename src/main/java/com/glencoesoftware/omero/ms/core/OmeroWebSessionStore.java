@@ -18,6 +18,7 @@
 
 package com.glencoesoftware.omero.ms.core;
 
+import java.io.Closeable;
 import java.util.concurrent.CompletionStage;
 
 /**
@@ -25,7 +26,7 @@ import java.util.concurrent.CompletionStage;
  * @author Chris Allan <callan@glencoesoftware.com>
  *
  */
-public interface OmeroWebSessionStore {
+public interface OmeroWebSessionStore extends Closeable {
 
     /**
      * Retrieve the OMERO.web session's current
