@@ -4,7 +4,7 @@ plugins {
     id 'java'
 }
 
-group = 'com.glencoesoftware.tt'
+group = 'com.glencoesoftware.omero'
 version = '0.1.0-SNAPSHOT'
 
 mainClassName = 'io.vertx.core.Starter'
@@ -98,4 +98,9 @@ jar {
 test {
   // enable TestNG support (default is JUnit)
   useTestNG()
+}
+
+applicationDistribution.from("$projectDir") {
+    include 'README.md'
+    include 'conf.json.example'
 }
