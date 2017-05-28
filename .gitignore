@@ -4,4 +4,6 @@
 .project
 .eclipse
 bin
+build
+conf.json
 target
