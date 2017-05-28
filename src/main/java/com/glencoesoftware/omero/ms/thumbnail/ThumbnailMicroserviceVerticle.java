@@ -110,7 +110,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
         // Thumbnail request handlers
         router.get(
-                "/webclient/render_thumbnail/size/:longestSide/:imageId")
+                "/webclient/render_thumbnail/size/:longestSide/:imageId*")
             .handler(this::renderThumbnail);
 
         int port = config().getInteger("port");
