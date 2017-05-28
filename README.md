@@ -14,7 +14,8 @@ Requirements
 Workflow
 ========
 
-The microservice server endpoint for OMERO.web relies on the following workflow:
+The microservice server endpoint for OMERO.web relies on the following
+workflow::
 
 1. Setup of OMERO.web to use database or Redis backed sessions
 
@@ -29,12 +30,27 @@ Development Installation
 
         git clone git@github.com:glencoesoftware/omero-ms-thumbnail.git
 
-1. Run the Gradle build and utilize the artifacts as requried:
+1. Run the Gradle build and utilize the artifacts as required::
 
         ./gradlew installDist
         cd build/install
         ...
 
+Eclipse Configuration
+=====================
+
+1. Run the Gradle Eclipse task::
+
+        ./gradlew eclipse
+
+1. Configure your environment::
+
+        cp conf.json.example conf.json
+
+1. Add a new Run Configuration with a main class of `io.vertx.core.Starter::
+
+        run "com.glencoesoftware.omero.ms.thumbnail.ThumbnailMicroserviceVerticle" \
+            -conf "conf.json"
 
 Configuring and Running the Server
 ==================================
