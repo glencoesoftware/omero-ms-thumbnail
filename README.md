@@ -1,7 +1,7 @@
 OMERO Thumbnail Microservice
 ============================
 
-OMERO thumbnail microservice server endpoint for OMERO.web.
+OMERO thumbnail Vert.x asynchronous microservice server endpoint for OMERO.web.
 
 Requirements
 ============
@@ -27,7 +27,7 @@ Development Installation
 
 1. Clone the repository::
 
-        git clone git@github.com:glencoesoftware/omero-thumbnail.git
+        git clone git@github.com:glencoesoftware/omero-ms-thumbnail.git
 
 1. Run the Gradle build and utilize the artifacts as requried:
 
@@ -50,7 +50,7 @@ Filesystem backed sessions **are not** supported.
 
 1. Start the server::
 
-        omero-thumbnail -conf path/to/conf.json
+        omero-ms-thumbnail -conf path/to/conf.json
 
 Redirecting OMERO.web to the Server
 ===================================
@@ -77,3 +77,6 @@ Using Gradle run the unit tests:
 
 Reference
 =========
+
+* https://lettuce.io/
+* http://vertx.io/
