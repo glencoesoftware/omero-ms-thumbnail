@@ -71,8 +71,9 @@ Filesystem backed sessions **are not** supported.
 Redirecting OMERO.web to the Server
 ===================================
 
-What follows are two snippets which can be placed in your nginx configuration
-for OMERO.web to redirect searches to the search server endpoint::
+What follows is a snippet which can be placed in your nginx configuration
+,**before** your default OMERO.web location handler, to redirect thumbnail to
+the thumbnail microservice server endpoint::
 
     upstream thumbnail-backend {
         server 127.0.0.1:8080 fail_timeout=0 max_fails=0;
@@ -80,8 +81,8 @@ for OMERO.web to redirect searches to the search server endpoint::
 
     ...
 
-    location /webclient/render_thumbnail/
-        proxy_pass http://thumbnail-backend/;
+    location /webclient/render_thumbnail/ {
+        proxy_pass http://thumbnail-backend;
     }
 
 Running Tests
