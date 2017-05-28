@@ -59,8 +59,8 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     private OmeroWebSessionStore sessionStore;
 
     /**
-     * Entry point method which starts the server event loop.
-     * @param args Command line arguments.
+     * Entry point method which starts the server event loop and initializes
+     * our current OMERO.web session store.
      */
     @Override
     public void start(Future<Void> future) {
@@ -124,6 +124,10 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         });
     }
 
+    /**
+     * Exit point method which when the verticle stops, cleans up our current
+     * OMERO.web session store.
+     */
     @Override
     public void stop() throws Exception {
         sessionStore.close();

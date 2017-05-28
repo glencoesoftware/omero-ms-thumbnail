@@ -75,7 +75,8 @@ public class ThumbnailVerticle extends AbstractVerticle {
      * Render thumbnail event handler. Responds with a <code>image/jpeg</code>
      * body on success or a failure.
      * @param message JSON encoded event data. Required keys are
-     * <code>longestSide</code> (Integer) and <code>imageId</code> (Long).
+     * <code>omeroSessionKey</code> (String), <code>longestSide</code>
+     * (Integer), and <code>imageId</code> (Long).
      */
     private void renderThumbnail(Message<String> message) {
         JsonObject data = new JsonObject(message.body());
@@ -88,7 +89,7 @@ public class ThumbnailVerticle extends AbstractVerticle {
 
         try (OmeroRequest<byte[]> request = new OmeroRequest<byte[]>(
                  host, port, omeroSessionKey)) {
-            byte[] thumbnail = request.handler(new ThumbnailRequestHandler(
+            byte[] thumbnail = request.execute(new ThumbnailRequestHandler(
                     longestSide, imageId)::renderThumbnail);
             message.reply(thumbnail);
         } catch (PermissionDeniedException

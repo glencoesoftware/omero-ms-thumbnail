@@ -38,7 +38,9 @@ import omero.model.Image;
 import omero.sys.ParametersI;
 
 /**
- * OMERO session aware verticle which provides session joining and lifecycle
+ * OMERO session aware handler whose event handler method conforms to the
+ * {@link OmeroRequestHandler} interface. This class is expected to be used as
+ * a lambda handler.
  * management.
  * @author Chris Allan <callan@glencoesoftware.com>
  *
@@ -48,8 +50,10 @@ public class ThumbnailRequestHandler {
     private static final org.slf4j.Logger log =
             LoggerFactory.getLogger(ThumbnailRequestHandler.class);
 
+    /** Longest side of the thumbnail. */
     private final int longestSide;
 
+    /** Image identifier to request a thumbnail for. */
     private final long imageId;
 
     /**

@@ -20,13 +20,12 @@ package com.glencoesoftware.omero.ms.core;
 
 
 /**
- * OMERO session aware verticle which provides session joining and lifecycle
- * management.
+ * Executor that is responsible for running one or more OMERO client actions.
  * @author Chris Allan <callan@glencoesoftware.com>
  *
  */
-public interface OmeroRequestHandler<T> {
+public interface OmeroRequestExecutor<T> {
 
-    T handle(omero.client client);
+    T execute(omero.client client);
 
 }

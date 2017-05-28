@@ -44,4 +44,5 @@ public interface OmeroWebSessionStore extends Closeable {
      * retrieval is complete is executed.
      */
     CompletionStage<IConnector> getConnectorAsync(String sessionKey);
+
 }

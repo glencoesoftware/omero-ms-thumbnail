@@ -19,7 +19,6 @@
 package com.glencoesoftware.omero.ms.core;
 
 import java.io.Closeable;
-import java.io.IOException;
 
 import org.perf4j.StopWatch;
 import org.perf4j.slf4j.Slf4JStopWatch;
@@ -31,8 +30,8 @@ import omero.ServerError;
 
 
 /**
- * OMERO session aware verticle which provides session joining and lifecycle
- * management.
+ * OMERO session aware request which provides session joining and lifecycle
+ * management for executing OMERO client actions.
  * @author Chris Allan <callan@glencoesoftware.com>
  * @param <T>
  *
@@ -42,10 +41,28 @@ public class OmeroRequest<T> implements Closeable {
     private static final org.slf4j.Logger log =
             LoggerFactory.getLogger(OmeroRequest.class);
 
+    /** OMERO session key. */
     private final String omeroSessionKey;
 
+    /** OMERO client. */
     private final omero.client client;
 
+    /**
+     * Default constructor. The session is joined once the instance has been
+     * constructed. {@link #execute(OmeroRequestExecutor)} can be called as
+     * soon as required.
+     * @param host OMERO server host.
+     * @param port OMERO server port.
+     * @param omeroSessionKey OMERO session key which will be used to join an
+     * active session.
+     * @throws PermissionDeniedException If there was a permissions related
+     * error joining the session. Should be considered an authentication
+     * failure.
+     * @throws CannotCreateSessionException If there was an unknown error
+     * creating the session. Should be considered an authentication failure.
+     * @throws ServerError If there is a server error joining an active
+     * session.
+     */
     public OmeroRequest(String host, int port, String omeroSessionKey)
             throws PermissionDeniedException, CannotCreateSessionException,
                 ServerError {
@@ -60,13 +77,24 @@ public class OmeroRequest<T> implements Closeable {
         }
     }
 
-    public T handler(OmeroRequestHandler<T> handler)
+    /**
+     * Execute OMERO client actions with a valid session..
+     * @param executor The handler that is to actually execute the one or more
+     * client actions.
+     * @throws ServerError If there is a server error executing one or more of
+     * the client actions.
+     */
+    public T execute(OmeroRequestExecutor<T> executor)
             throws ServerError {
-            return handler.handle(client);
+        return executor.execute(client);
     }
 
+    /**
+     * Responsible for closing the OMERO session after one or more executions
+     * have completed.
+     */
     @Override
-    public void close() throws IOException {
+    public void close() {
         StopWatch t0 = new Slf4JStopWatch("closeSession");
         try {
             client.closeSession();
