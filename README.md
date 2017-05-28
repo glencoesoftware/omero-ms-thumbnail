@@ -47,7 +47,7 @@ Eclipse Configuration
 
         cp conf.json.example conf.json
 
-1. Add a new Run Configuration with a main class of `io.vertx.core.Starter::
+1. Add a new Run Configuration with a main class of `io.vertx.core.Starter`::
 
         run "com.glencoesoftware.omero.ms.thumbnail.ThumbnailMicroserviceVerticle" \
             -conf "conf.json"
@@ -71,9 +71,9 @@ Filesystem backed sessions **are not** supported.
 Redirecting OMERO.web to the Server
 ===================================
 
-What follows is a snippet which can be placed in your nginx configuration
-,**before** your default OMERO.web location handler, to redirect thumbnail to
-the thumbnail microservice server endpoint::
+What follows is a snippet which can be placed in your nginx configuration,
+**before** your default OMERO.web location handler, to redirect thumbnail
+rendering to the thumbnail microservice server endpoint::
 
     upstream thumbnail-backend {
         server 127.0.0.1:8080 fail_timeout=0 max_fails=0;
