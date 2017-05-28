@@ -149,7 +149,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         data.put("omeroSessionKey", event.get("omero.session_key"));
 
         vertx.eventBus().send(
-                "omero.render_thumbnail",
+                ThumbnailVerticle.RENDER_THUMBNAIL_EVENT,
                 Json.encode(data), result -> {
             try {
                 if (result.failed()) {
