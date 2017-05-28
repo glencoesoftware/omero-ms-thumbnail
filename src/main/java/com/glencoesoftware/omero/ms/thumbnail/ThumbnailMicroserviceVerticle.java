@@ -94,11 +94,14 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
             }
             String sessionKey = cookie.getValue();
             log.debug("OMERO.web session key: {}", sessionKey);
-            sessionStore.getConnectorAsync(sessionKey, connector -> {
-                if (connector != null) {
-                    event.put(
-                        "omero.session_key", connector.getOmeroSessionKey());
+            sessionStore.getConnectorAsync(sessionKey).thenAccept(connector -> {
+                if (connector == null) {
+                    event.response().setStatusCode(403);
+                    event.response().end();
+                    return;
                 }
+                event.put(
+                    "omero.session_key", connector.getOmeroSessionKey());
                 event.next();
             });
         });

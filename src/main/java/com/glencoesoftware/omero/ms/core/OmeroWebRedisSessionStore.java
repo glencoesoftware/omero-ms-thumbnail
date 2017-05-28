@@ -20,6 +20,7 @@ package com.glencoesoftware.omero.ms.core;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.concurrent.CompletionStage;
 
 import org.perf4j.StopWatch;
 import org.perf4j.slf4j.Slf4JStopWatch;
@@ -101,7 +102,7 @@ public class OmeroWebRedisSessionStore
     /* (non-Javadoc)
      * @see com.glencoesoftware.omero.ms.core.OmeroWebSessionStore#getConnectorAsync(java.lang.String, com.glencoesoftware.omero.ms.core.ConnectorHandler)
      */
-    public void getConnectorAsync(String sessionKey, ConnectorHandler handler) {
+    public CompletionStage<IConnector> getConnectorAsync(String sessionKey) {
         RedisAsyncCommands<byte[], byte[]> commands = connection.async();
         String key = String.format(
                 KEY_FORMAT,
@@ -113,21 +114,20 @@ public class OmeroWebRedisSessionStore
         final StopWatch t0 = new Slf4JStopWatch("getConnector");
         // Binary retrieval, get(String) includes a UTF-8 step
         RedisFuture<byte[]> future = commands.get(key.getBytes());
-        future.thenAccept(value -> {
+        return future.<IConnector>thenApply(value -> {
             try {
-                if (value == null) {
-                    handler.handle(null);
-                    return;
+                if (value != null) {
+                    PyDictionary djangoSession =
+                            (PyDictionary) cPickle.loads(
+                                    Py.newString(StringUtil.fromBytes(value)));
+                    return (IConnector) djangoSession.get("connector");
                 }
-                PyDictionary djangoSession =
-                        (PyDictionary) cPickle.loads(
-                                Py.newString(StringUtil.fromBytes(value)));
-                handler.handle((IConnector) djangoSession.get("connector"));
             } catch (Exception e) {
                 log.error("Exception while unpickling connector", e);
             } finally {
                 t0.stop();
             }
+            return null;
         });
     }
 

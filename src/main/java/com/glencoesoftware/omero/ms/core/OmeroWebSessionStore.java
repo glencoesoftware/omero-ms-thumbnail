@@ -18,6 +18,8 @@
 
 package com.glencoesoftware.omero.ms.core;
 
+import java.util.concurrent.CompletionStage;
+
 /**
  * An OMERO.web session store.
  * @author Chris Allan <callan@glencoesoftware.com>
@@ -37,7 +39,8 @@ public interface OmeroWebSessionStore {
      * Retrieve the OMERO.web session's current
      * <code>omeroweb.connector.Connector</code>.
      * @param sessionKey Session key to retrieve a connector for.
-     * @param handler Handler that is executed with the retrieved connector.
+     * @return A new {@link CompletionStage} that, when the {@link IConnector}
+     * retrieval is complete is executed.
      */
-    void getConnectorAsync(String sessionKey, ConnectorHandler handler);
+    CompletionStage<IConnector> getConnectorAsync(String sessionKey);
 }
