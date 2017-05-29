@@ -72,14 +72,19 @@ Redirecting OMERO.web to the Server
 ===================================
 
 What follows is a snippet which can be placed in your nginx configuration,
-**before** your default OMERO.web location handler, to redirect thumbnail
-rendering to the thumbnail microservice server endpoint::
+**before** your default OMERO.web location handler, to redirect both
+*webclient* and *webgateway* thumbnail rendering currently used by OMERO.web
+to the thumbnail microservice server endpoint::
 
     upstream thumbnail-backend {
         server 127.0.0.1:8080 fail_timeout=0 max_fails=0;
     }
 
     ...
+
+    location /webgateway/render_thumbnail/ {
+        proxy_pass http://thumbnail_backend;
+    }
 
     location /webclient/render_thumbnail/ {
         proxy_pass http://thumbnail-backend;
