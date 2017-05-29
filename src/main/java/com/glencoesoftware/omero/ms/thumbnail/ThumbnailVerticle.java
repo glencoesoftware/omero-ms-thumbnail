@@ -91,7 +91,11 @@ public class ThumbnailVerticle extends AbstractVerticle {
                  host, port, omeroSessionKey)) {
             byte[] thumbnail = request.execute(new ThumbnailRequestHandler(
                     longestSide, imageId)::renderThumbnail);
-            message.reply(thumbnail);
+            if (thumbnail == null) {
+                message.fail(404, "Cannot find Image:" + imageId);
+            } else {
+                message.reply(thumbnail);
+            }
         } catch (PermissionDeniedException
                  | CannotCreateSessionException e) {
             String v = "Permission denied";
