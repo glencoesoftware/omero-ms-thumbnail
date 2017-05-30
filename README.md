@@ -38,6 +38,15 @@ Development Installation
         cd build/install
         ...
 
+1. Log in to the OMERO.web instance you would like to develop against with
+your web browser and with the developer tools find the `sessionid` cookie
+value. This is the OMERO.web session key.
+
+1. Run single or multiple thumbnail tests using `curl`::
+
+        curl -H 'Cookie: sessionid=<omero_web_session_key>' \
+            http://localhost:8080/render_thumbnail/size/96/<image_id>
+
 Eclipse Configuration
 =====================
 
