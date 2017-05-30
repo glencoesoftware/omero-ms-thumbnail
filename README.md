@@ -1,3 +1,5 @@
+[![AppVeyor status](https://ci.appveyor.com/api/projects/status/github/omero-ms-thumbnail)](https://ci.appveyor.com/project/gs-jenkins/omero-ms-thumbnail)
+
 OMERO Thumbnail Microservice
 ============================
 
