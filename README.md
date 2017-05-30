@@ -54,6 +54,13 @@ Eclipse Configuration
         run "com.glencoesoftware.omero.ms.thumbnail.ThumbnailMicroserviceVerticle" \
             -conf "conf.json"
 
+Build Artifacts
+===============
+
+The latest artifacts, built by AppVeyor, can be found here::
+
+* https://ci.appveyor.com/project/gs-jenkins/omero-ms-thumbnail/build/artifacts
+
 Configuring and Running the Server
 ==================================
 
@@ -102,5 +109,6 @@ Using Gradle run the unit tests:
 Reference
 =========
 
+* https://github.com/glencoesoftware/omero-ms-core
 * https://lettuce.io/
 * http://vertx.io/
