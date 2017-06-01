@@ -101,6 +101,34 @@ specifying the configuration when starting the microservice server::
 Debugging the logback configuration can be done by providing the additional
 `-Dlogback.debug=true` property.
 
+Using systemd
+-------------
+
+If you are using `systemd` you can place an appropriately modified version of
+the included `omero-ms-thumbnail.service` into your `/etc/systemd/system`
+directory and then execute::
+
+    systemctl daemon-reload
+    systemctl start omero-ms-thumbnail.service
+
+Running `systemctl status omero-ms-thumbnail.service` will then produce
+output similar to the following::
+
+    # systemctl status omero-ms-thumbnail.service
+    ● omero-ms-thumbnail.service - OMERO thumbnail microservice server
+       Loaded: loaded (/etc/systemd/system/omero-ms-thumbnail.service; disabled; vendor preset: disabled)
+       Active: active (running) since Thu 2017-06-01 14:40:53 UTC; 8min ago
+     Main PID: 9096 (java)
+       CGroup: /system.slice/omero-ms-thumbnail.service
+               └─9096 java -Dlogback.configurationFile=/opt/omero/omero-ms-thumbnail-0.1.0-SNAPSHOT/logback.xml -classpath /opt/omero/omero-ms-thumbnail-0.1.0-SNAPSHOT/lib/omero-ms-thumbnail-0.1.0-SNAPSHOT.jar:/opt/omero/omero-...
+
+    Jun 01 14:40:53 demo.glencoesoftware.com systemd[1]: Started OMERO thumbnail microservice server.
+    Jun 01 14:40:53 demo.glencoesoftware.com systemd[1]: Starting OMERO thumbnail microservice server...
+    Jun 01 14:40:54 demo.glencoesoftware.com omero-ms-thumbnail[9096]: Jun 01, 2017 2:40:54 PM io.vertx.core.spi.resolver.ResolverProvider
+    Jun 01 14:40:54 demo.glencoesoftware.com omero-ms-thumbnail[9096]: INFO: Using the default address resolver as the dns resolver could not be loaded
+    Jun 01 14:40:55 demo.glencoesoftware.com omero-ms-thumbnail[9096]: Jun 01, 2017 2:40:55 PM io.vertx.core.Starter
+    Jun 01 14:40:55 demo.glencoesoftware.com omero-ms-thumbnail[9096]: INFO: Succeeded in deploying verticle
+
 Redirecting OMERO.web to the Server
 ===================================
 
