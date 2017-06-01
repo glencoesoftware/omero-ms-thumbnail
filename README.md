@@ -86,6 +86,21 @@ Filesystem backed sessions **are not** supported.
 
         omero-ms-thumbnail -conf path/to/conf.json
 
+Configuring Logging
+-------------------
+
+Logging is provided using the logback library. You can configure logging by
+copying the included `logback.xml.example`, editing as required, and then
+specifying the configuration when starting the microservice server::
+
+    cp logback.xml.example logback.xml
+    ...
+    JAVA_OPTS="-Dlogback.configurationFile=/path/to/logback.xml" \
+        omero-ms-thumbnail ...
+
+Debugging the logback configuration can be done by providing the additional
+`-Dlogback.debug=true` property.
+
 Redirecting OMERO.web to the Server
 ===================================
 
