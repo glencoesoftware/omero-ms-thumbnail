@@ -19,7 +19,9 @@
 package com.glencoesoftware.omero.ms.thumbnail;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 
@@ -115,6 +117,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         router.get(
                 "/webgateway/render_thumbnail/:imageId/:longestSide*")
             .handler(this::renderThumbnail);
+        router.get(
+                "/webgateway/get_thumbnails/:longestSide*")
+            .handler(this::getThumbnails);
 
         int port = config().getInteger("port");
         log.info("Starting HTTP server *:{}", port);
@@ -174,6 +179,54 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                         "Content-Length",
                         String.valueOf(thumbnail.length));
                 response.write(Buffer.buffer(thumbnail));
+            } finally {
+                response.end();
+                log.debug("Response ended");
+            }
+        });
+    }
+
+    /**
+     * Get thumbnails event handler. Responds with a JSON dictionary of Base64
+     * encoded <code>image/jpeg</code> thumbnails keyed by {@link Image}
+     * identifier. Each dictionary value is prefixed with
+     * <code>data:image/jpeg;base64,</code> so that it can be used with
+     * <a href="http://caniuse.com/#feat=datauri">data URIs</a>.
+     * @param event Current routing context.
+     */
+    private void getThumbnails(RoutingContext event) {
+        HttpServerRequest request = event.request();
+        final String longestSide =
+                request.getParam("longestSide") == null? "96"
+                        : request.getParam("longestSide");
+        final List<Long> imageIds = request.params().getAll("id").stream()
+                .map(x -> Long.parseLong(x))
+                .collect(Collectors.toList());
+        final HttpServerResponse response = event.response();
+        Map<String, Object> data = new HashMap<String, Object>();
+        data.put("longestSide", Integer.parseInt(longestSide));
+        data.put("imageIds", imageIds.toArray());
+        data.put("omeroSessionKey", event.get("omero.session_key"));
+
+        vertx.eventBus().send(
+                ThumbnailVerticle.GET_THUMBNAILS_EVENT,
+                Json.encode(data), result -> {
+            try {
+                if (result.failed()) {
+                    Throwable t = result.cause();
+                    int statusCode = 404;
+                    if (t instanceof ReplyException) {
+                        statusCode = ((ReplyException) t).failureCode();
+                    }
+                    response.setStatusCode(statusCode);
+                    return;
+                }
+                String json = (String) result.result().body();
+                response.headers().set("Content-Type", "application/json");
+                response.headers().set(
+                        "Content-Length",
+                        String.valueOf(json.length()));
+                response.write(json);
             } finally {
                 response.end();
                 log.debug("Response ended");

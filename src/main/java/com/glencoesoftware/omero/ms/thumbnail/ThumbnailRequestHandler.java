@@ -18,43 +18,19 @@
 
 package com.glencoesoftware.omero.ms.thumbnail;
 
-import static omero.rtypes.rint;
-import static omero.rtypes.unwrap;
-
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-import org.perf4j.StopWatch;
-import org.perf4j.slf4j.Slf4JStopWatch;
-import org.slf4j.LoggerFactory;
-
-import omero.ServerError;
-import omero.api.ThumbnailStorePrx;
-import omero.model.IObject;
 import omero.model.Image;
-import omero.sys.ParametersI;
 
 /**
  * OMERO session aware handler whose event handler method conforms to the
  * {@link OmeroRequestHandler} interface. This class is expected to be used as
  * a lambda handler.
- * management.
  * @author Chris Allan <callan@glencoesoftware.com>
  *
  */
-public class ThumbnailRequestHandler {
-
-    private static final org.slf4j.Logger log =
-            LoggerFactory.getLogger(ThumbnailRequestHandler.class);
-
-    /** Longest side of the thumbnail. */
-    private final int longestSide;
-
-    /** Image identifier to request a thumbnail for. */
-    private final long imageId;
+public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
 
     /**
      * Default constructor.
@@ -64,131 +40,19 @@ public class ThumbnailRequestHandler {
      * @param imageId {@link Image} identifier to request a thumbnail for.
      */
     public ThumbnailRequestHandler(int longestSide, long imageId) {
-        this.longestSide = longestSide;
-        this.imageId = imageId;
+        super(longestSide, Arrays.asList(imageId));
     }
 
     /**
-     * Render thumbnail event handler. Responds with a <code>image/jpeg</code>
-     * body on success based on the <code>longestSide</code> and
-     * <code>imageId</code> encoded in the URL or HTTP 404 if the {@link Image}
-     * does not exist or the user does not have permissions to access it.
-     * @param event Current routing context.
+     * Retrieves a JPEG thumbnail from the server.
+     * @return JPEG thumbnail byte array.
      */
     public byte[] renderThumbnail(omero.client client) {
-        try {
-            Image image = getImage(client, imageId);
-            if (image != null) {
-                return getThumbnail(client, image, longestSide);
-            } else {
-                log.debug("Cannot find Image:{}", imageId);
-            }
-        } catch (Exception e) {
-            log.error("Exception while retrieving thumbnail", e);
+        Map<Long, byte[]> thumbnails = renderThumbnails(client);
+        if (thumbnails == null) {
+            return null;
         }
-        return null;
-    }
-
-    /**
-     * Retrieves a single {@link Image} from the server.
-     * @param client OMERO client to use for querying.
-     * @param imageId {@link Image} identifier to query for.
-     * @return Loaded {@link Image} and primary {@link Pixels} or
-     * <code>null</code> if the image does not exist.
-     * @throws ServerError If there was any sort of error retrieving the image.
-     */
-    private Image getImage(omero.client client, Long imageId)
-            throws ServerError {
-        return (Image) getImages(client, Arrays.asList(imageId))
-                .stream()
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
-     * Retrieves a single {@link Image} from the server.
-     * @param client OMERO client to use for querying.
-     * @param imageIds {@link Image} identifiers to query for.
-     * @return List of loaded {@link Image} and primary {@link Pixels}.
-     * @throws ServerError If there was any sort of error retrieving the images.
-     */
-    private List<IObject> getImages(omero.client client, List<Long> imageIds)
-            throws ServerError {
-        Map<String, String> ctx = new HashMap<String, String>();
-        ctx.put("omero.group", "-1");
-        ParametersI params = new ParametersI();
-        params.addIds(imageIds);
-        StopWatch t0 = new Slf4JStopWatch("getImages");
-        try {
-            return client.getSession().getQueryService().findAllByQuery(
-                "SELECT i FROM Image as i " +
-                "JOIN FETCH i.pixels as p WHERE i.id IN (:ids)",
-                params, ctx
-            );
-        } finally {
-            t0.stop();
-        }
-    }
-
-    /**
-     * Retrieves a single JPEG thumbnail from the server.
-     * @param client OMERO client to use for thumbnail retrieval.
-     * @param image {@link Image} instance to retrieve thumbnail for.
-     * @param longestSide Size to confine or upscale the longest side of the
-     * thumbnail to. The other side will then proportionately, based on aspect
-     * ratio, be scaled accordingly.
-     * @return JPEG thumbnail as a byte array.
-     * @throws ServerError If there was any sort of error retrieving the
-     * thumbnails.
-     */
-    private byte[] getThumbnail(
-            omero.client client, Image image, int longestSide)
-                    throws ServerError {
-        return getThumbnails(client, Arrays.asList(image), longestSide)
-                .get(unwrap(image.getPrimaryPixels().getId()));
-    }
-
-    /**
-     * Retrieves a map of JPEG thumbnails from the server.
-     * @param client OMERO client to use for thumbnail retrieval.
-     * @param images {@link Image} list to retrieve thumbnails for.
-     * @param longestSide Size to confine or upscale the longest side of each
-     * thumbnail to. The other side will then proportionately, based on aspect
-     * ratio, be scaled accordingly.
-     * @return Map of primary {@link Pixels} to JPEG thumbnail byte array.
-     * @throws ServerError If there was any sort of error retrieving the
-     * thumbnails.
-     */
-    private Map<Long, byte[]> getThumbnails(
-            omero.client client, List<? extends IObject> images,
-            int longestSide)
-                    throws ServerError{
-        ThumbnailStorePrx thumbnailStore =
-                client.getSession().createThumbnailStore();
-        try {
-            Map<String, String> ctx = new HashMap<String, String>();
-            List<Long> pixelsIds = new ArrayList<Long>();
-            for (IObject o : images) {
-                Image image = (Image) o;
-                pixelsIds.add((Long) unwrap(image.getPrimaryPixels().getId()));
-                // Assume all the groups are the same
-                ctx.put(
-                    "omero.group",
-                    String.valueOf(unwrap(
-                            image.getDetails().getGroup().getId()))
-                );
-            }
-            StopWatch t0 = new Slf4JStopWatch("getThumbnailByLongestSideSet");
-            try {
-                return thumbnailStore.getThumbnailByLongestSideSet(
-                    rint(longestSide), pixelsIds, ctx
-                );
-            } finally {
-                t0.stop();
-            }
-        } finally {
-            thumbnailStore.close();
-        }
+        return thumbnails.get(imageIds.get(0));
     }
 
 }
