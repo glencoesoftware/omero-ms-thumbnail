@@ -26,6 +26,7 @@ import java.util.stream.Collectors;
 import org.slf4j.LoggerFactory;
 
 import com.glencoesoftware.omero.ms.core.OmeroWebRedisSessionStore;
+import com.glencoesoftware.omero.ms.core.OmeroWebSessionRequestHandler;
 import com.glencoesoftware.omero.ms.core.OmeroWebSessionStore;
 
 import ch.qos.logback.classic.Level;
@@ -90,25 +91,8 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         // OMERO.web session and joins it.
         JsonObject redis = config().getJsonObject("redis");
         sessionStore = new OmeroWebRedisSessionStore(redis.getString("uri"));
-        router.route().handler(event -> {
-            Cookie cookie = event.getCookie("sessionid");
-            if (cookie == null) {
-                event.response().setStatusCode(403);
-                event.response().end();
-            }
-            String sessionKey = cookie.getValue();
-            log.debug("OMERO.web session key: {}", sessionKey);
-            sessionStore.getConnectorAsync(sessionKey).thenAccept(connector -> {
-                if (connector == null) {
-                    event.response().setStatusCode(403);
-                    event.response().end();
-                    return;
-                }
-                event.put(
-                    "omero.session_key", connector.getOmeroSessionKey());
-                event.next();
-            });
-        });
+        router.route().handler(
+                new OmeroWebSessionRequestHandler(sessionStore));
 
         // Thumbnail request handlers
         router.get(
