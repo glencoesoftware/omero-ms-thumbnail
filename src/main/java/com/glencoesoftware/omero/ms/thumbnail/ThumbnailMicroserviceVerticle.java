@@ -99,6 +99,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                 "/webclient/render_thumbnail/size/:longestSide/:imageId*")
             .handler(this::renderThumbnail);
         router.get(
+                "/webclient/render_thumbnail/:imageId*")
+            .handler(this::renderThumbnail);
+        router.get(
                 "/webgateway/render_thumbnail/:imageId/:longestSide*")
             .handler(this::renderThumbnail);
         router.get(
