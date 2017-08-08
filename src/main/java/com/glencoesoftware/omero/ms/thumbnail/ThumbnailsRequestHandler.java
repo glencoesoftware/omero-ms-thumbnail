@@ -87,7 +87,7 @@ public class ThumbnailsRequestHandler {
     }
 
     /**
-     * Retrieves a single {@link Image} from the server.
+     * Retrieves a list of loaded {@link Image}s from the server.
      * @param client OMERO client to use for querying.
      * @param imageIds {@link Image} identifiers to query for.
      * @return List of loaded {@link Image} and primary {@link Pixels}.
