@@ -21,6 +21,7 @@ package com.glencoesoftware.omero.ms.thumbnail;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
@@ -149,6 +150,10 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         data.put("longestSide", Integer.parseInt(longestSide));
         data.put("imageId", imageId);
         data.put("omeroSessionKey", event.get("omero.session_key"));
+        data.put("renderingDefId",
+                Optional.ofNullable(request.getParam("rdefId"))
+                    .map(Long::parseLong)
+                    .orElse(null));
 
         vertx.eventBus().send(
                 ThumbnailVerticle.RENDER_THUMBNAIL_EVENT,
