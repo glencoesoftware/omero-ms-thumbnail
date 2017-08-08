@@ -140,15 +140,14 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
      * @param event Current routing context.
      */
     private void renderThumbnail(RoutingContext event) {
-        HttpServerRequest request = event.request();
-        final String longestSide =
-                request.getParam("longestSide") == null? "96"
-                        : request.getParam("longestSide");
-        final Long imageId = Long.parseLong(request.getParam("imageId"));
+        final HttpServerRequest request = event.request();
         final HttpServerResponse response = event.response();
-        Map<String, Object> data = new HashMap<String, Object>();
-        data.put("longestSide", Integer.parseInt(longestSide));
-        data.put("imageId", imageId);
+        final Map<String, Object> data = new HashMap<String, Object>();
+        data.put("longestSide",
+                Optional.ofNullable(request.getParam("longestSide"))
+                    .map(Integer::parseInt)
+                    .orElse(96));
+        data.put("imageId", Long.parseLong(request.getParam("imageId")));
         data.put("omeroSessionKey", event.get("omero.session_key"));
         data.put("renderingDefId",
                 Optional.ofNullable(request.getParam("rdefId"))
