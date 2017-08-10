@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Map.Entry;
 
 import org.slf4j.LoggerFactory;
@@ -98,14 +99,16 @@ public class ThumbnailVerticle extends AbstractVerticle {
         String omeroSessionKey = data.getString("omeroSessionKey");
         int longestSide = data.getInteger("longestSide");
         long imageId = data.getLong("imageId");
+        Optional<Long> renderingDefId =
+                Optional.ofNullable(data.getLong("renderingDefId"));
         log.debug(
-            "Render thumbnail request Image:{} longest side {}",
-            imageId, longestSide);
+            "Render thumbnail request Image:{} longest side {} RenderingDef:{}",
+            imageId, longestSide, renderingDefId.orElse(null));
 
         try (OmeroRequest<byte[]> request = new OmeroRequest<byte[]>(
                  host, port, omeroSessionKey)) {
             byte[] thumbnail = request.execute(new ThumbnailRequestHandler(
-                    longestSide, imageId)::renderThumbnail);
+                    longestSide, imageId, renderingDefId)::renderThumbnail);
             if (thumbnail == null) {
                 message.fail(404, "Cannot find Image:" + imageId);
             } else {
