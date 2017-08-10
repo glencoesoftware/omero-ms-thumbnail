@@ -21,6 +21,7 @@ package com.glencoesoftware.omero.ms.thumbnail;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,6 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.web.Cookie;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.CookieHandler;
@@ -99,7 +99,13 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                 "/webclient/render_thumbnail/size/:longestSide/:imageId*")
             .handler(this::renderThumbnail);
         router.get(
+                "/webclient/render_thumbnail/:imageId*")
+            .handler(this::renderThumbnail);
+        router.get(
                 "/webgateway/render_thumbnail/:imageId/:longestSide*")
+            .handler(this::renderThumbnail);
+        router.get(
+                "/webgateway/render_thumbnail/:imageId*")
             .handler(this::renderThumbnail);
         router.get(
                 "/webgateway/get_thumbnails/:longestSide*")
@@ -133,16 +139,19 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
      * @param event Current routing context.
      */
     private void renderThumbnail(RoutingContext event) {
-        HttpServerRequest request = event.request();
-        final String longestSide =
-                request.getParam("longestSide") == null? "96"
-                        : request.getParam("longestSide");
-        final Long imageId = Long.parseLong(request.getParam("imageId"));
+        final HttpServerRequest request = event.request();
         final HttpServerResponse response = event.response();
-        Map<String, Object> data = new HashMap<String, Object>();
-        data.put("longestSide", Integer.parseInt(longestSide));
-        data.put("imageId", imageId);
+        final Map<String, Object> data = new HashMap<String, Object>();
+        data.put("longestSide",
+                Optional.ofNullable(request.getParam("longestSide"))
+                    .map(Integer::parseInt)
+                    .orElse(96));
+        data.put("imageId", Long.parseLong(request.getParam("imageId")));
         data.put("omeroSessionKey", event.get("omero.session_key"));
+        data.put("renderingDefId",
+                Optional.ofNullable(request.getParam("rdefId"))
+                    .map(Long::parseLong)
+                    .orElse(null));
 
         vertx.eventBus().send(
                 ThumbnailVerticle.RENDER_THUMBNAIL_EVENT,
@@ -179,17 +188,18 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
      * @param event Current routing context.
      */
     private void getThumbnails(RoutingContext event) {
-        HttpServerRequest request = event.request();
-        final String longestSide =
-                request.getParam("longestSide") == null? "96"
-                        : request.getParam("longestSide");
-        final List<Long> imageIds = request.params().getAll("id").stream()
-                .map(x -> Long.parseLong(x))
-                .collect(Collectors.toList());
+        final HttpServerRequest request = event.request();
         final HttpServerResponse response = event.response();
-        Map<String, Object> data = new HashMap<String, Object>();
-        data.put("longestSide", Integer.parseInt(longestSide));
-        data.put("imageIds", imageIds.toArray());
+        final Map<String, Object> data = new HashMap<String, Object>();
+        data.put("longestSide",
+                Optional.ofNullable(request.getParam("longestSide"))
+                    .map(Integer::parseInt)
+                    .orElse(96));
+        data.put("imageIds",
+                request.params().getAll("id").stream()
+                    .map(Long::parseLong)
+                    .collect(Collectors.toList())
+                    .toArray());
         data.put("omeroSessionKey", event.get("omero.session_key"));
 
         vertx.eventBus().send(
