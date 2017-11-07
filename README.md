@@ -137,7 +137,7 @@ What follows is a snippet which can be placed in your nginx configuration,
 *webclient* and *webgateway* thumbnail rendering currently used by OMERO.web
 to the thumbnail microservice server endpoint::
 
-    upstream thumbnail-backend {
+    upstream thumbnail_backend {
         server 127.0.0.1:8080 fail_timeout=0 max_fails=0;
     }
 
@@ -148,7 +148,7 @@ to the thumbnail microservice server endpoint::
     }
 
     location /webclient/render_thumbnail/ {
-        proxy_pass http://thumbnail-backend;
+        proxy_pass http://thumbnail_backend;
     }
 
 Running Tests
