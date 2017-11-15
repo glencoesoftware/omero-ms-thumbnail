@@ -105,7 +105,7 @@ public class ThumbnailVerticle extends AbstractVerticle {
             "Render thumbnail request Image:{} longest side {} RenderingDef:{}",
             imageId, longestSide, renderingDefId.orElse(null));
 
-        try (OmeroRequest<byte[]> request = new OmeroRequest<byte[]>(
+        try (OmeroRequest request = new OmeroRequest(
                  host, port, omeroSessionKey)) {
             byte[] thumbnail = request.execute(new ThumbnailRequestHandler(
                     longestSide, imageId, renderingDefId)::renderThumbnail);
@@ -149,9 +149,8 @@ public class ThumbnailVerticle extends AbstractVerticle {
             "Render thumbnail request ImageIds:{} longest side {}",
             imageIds, longestSide);
 
-        try (OmeroRequest<Map<Long, byte[]>> request =
-                new OmeroRequest<Map<Long, byte[]>>(
-                        host, port, omeroSessionKey)) {
+        try (OmeroRequest request = new OmeroRequest(
+                host, port, omeroSessionKey)) {
             Map<Long, byte[]> thumbnails = request.execute(
                     new ThumbnailsRequestHandler(
                             longestSide, imageIds)::renderThumbnails);

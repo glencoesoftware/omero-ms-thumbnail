@@ -13,7 +13,7 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 repositories {
-    mavenCentral()
+    jcenter()
     maven {
         name 'Unidata'
         url 'https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases'
@@ -108,4 +108,5 @@ applicationDistribution.from("$projectDir") {
     include 'README.md'
     include 'conf.json.example'
     include 'logback.xml.example'
+    include 'omero-ms-thumnbail.service'
 }

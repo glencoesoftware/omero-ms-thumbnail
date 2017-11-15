@@ -19,7 +19,6 @@
 package com.glencoesoftware.omero.ms.thumbnail;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -153,7 +152,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                     .map(Long::parseLong)
                     .orElse(null));
 
-        vertx.eventBus().send(
+        vertx.eventBus().<byte[]>send(
                 ThumbnailVerticle.RENDER_THUMBNAIL_EVENT,
                 Json.encode(data), result -> {
             try {
@@ -166,7 +165,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                     response.setStatusCode(statusCode);
                     return;
                 }
-                byte[] thumbnail = (byte[]) result.result().body();
+                byte[] thumbnail = result.result().body();
                 response.headers().set("Content-Type", "image/jpeg");
                 response.headers().set(
                         "Content-Length",
@@ -202,7 +201,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                     .toArray());
         data.put("omeroSessionKey", event.get("omero.session_key"));
 
-        vertx.eventBus().send(
+        vertx.eventBus().<String>send(
                 ThumbnailVerticle.GET_THUMBNAILS_EVENT,
                 Json.encode(data), result -> {
             try {
@@ -215,7 +214,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                     response.setStatusCode(statusCode);
                     return;
                 }
-                String json = (String) result.result().body();
+                String json = result.result().body();
                 response.headers().set("Content-Type", "application/json");
                 response.headers().set(
                         "Content-Length",
