@@ -99,4 +99,5 @@ applicationDistribution.from("$projectDir") {
     include 'README.md'
     include 'conf.json.example'
     include 'logback.xml.example'
+    include 'omero-ms-thumnbail.service'
 }
