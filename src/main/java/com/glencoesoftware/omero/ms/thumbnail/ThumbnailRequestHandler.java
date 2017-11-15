@@ -142,7 +142,7 @@ public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
                 // Operate as the object owner if we are an administrator
                 EventContext eventContext =
                         client.getSession().getAdminService().getEventContext();
-                if (eventContext.memberOfGroups.contains(0)) {
+                if (eventContext.memberOfGroups.contains(0L)) {
                     ctx.put(
                         "omero.user",
                         String.valueOf(unwrap(
