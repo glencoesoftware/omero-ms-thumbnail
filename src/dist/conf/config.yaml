@@ -1,0 +1,9 @@
+# The port that the microservice will listen on
+port: 8080
+# OMERO server that the microservice will communicate with (as a client)
+omero:
+    host: localhost
+    port: 4064
+# Redis instance that OMERO.web is using to store session information
+redis:
+    uri: "redis://127.0.0.1:6379/0"
