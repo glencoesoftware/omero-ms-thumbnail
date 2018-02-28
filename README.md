@@ -19,49 +19,13 @@ Workflow
 The microservice server endpoint for OMERO.web relies on the following
 workflow::
 
-1. Setup of OMERO.web to use database or Redis backed sessions
+1. Setup of OMERO.web to use Redis backed sessions
+
+1. Configuring the microservice endpoint
 
 1. Running the microservice endpoint for OMERO.web
 
 1. Redirecting your OMERO.web installation to use the microservice endpoint
-
-Development Installation
-========================
-
-1. Clone the repository::
-
-        git clone git@github.com:glencoesoftware/omero-ms-thumbnail.git
-
-1. Run the Gradle build and utilize the artifacts as required::
-
-        ./gradlew installDist
-        cd build/install
-        ...
-
-1. Log in to the OMERO.web instance you would like to develop against with
-your web browser and with the developer tools find the `sessionid` cookie
-value. This is the OMERO.web session key.
-
-1. Run single or multiple thumbnail tests using `curl`::
-
-        curl -H 'Cookie: sessionid=<omero_web_session_key>' \
-            http://localhost:8080/render_thumbnail/size/96/<image_id>
-
-Eclipse Configuration
-=====================
-
-1. Run the Gradle Eclipse task::
-
-        ./gradlew eclipse
-
-1. Configure your environment::
-
-        cp conf.json.example conf.json
-
-1. Add a new Run Configuration with a main class of `io.vertx.core.Starter`::
-
-        run "com.glencoesoftware.omero.ms.thumbnail.ThumbnailMicroserviceVerticle" \
-            -conf "conf.json"
 
 Build Artifacts
 ===============
@@ -78,18 +42,16 @@ session.  As such it is essential that as a prerequisite to running the
 server that your OMERO.web instance be configured to use Redis backed sessions.
 Filesystem backed sessions **are not** supported.
 
-1. Configure the application::
+1. Configure the application by editing `conf/config.yaml`
 
-        cp conf.json.example path/to/conf.json
+1. Start the server
 
-1. Start the server::
-
-        omero-ms-thumbnail -conf path/to/conf.json
+        omero-ms-thumbnail
 
 Configuring Logging
 -------------------
 
-Logging is provided using the logback library. You can configure logging by
+Logging is provided using the logback library.  You can configure logging by
 copying the included `logback.xml.example`, editing as required, and then
 specifying the configuration when starting the microservice server::
 
@@ -150,6 +112,46 @@ to the thumbnail microservice server endpoint::
     location /webclient/render_thumbnail/ {
         proxy_pass http://thumbnail_backend;
     }
+
+
+Development Installation
+========================
+
+1. Clone the repository::
+
+        git clone git@github.com:glencoesoftware/omero-ms-thumbnail.git
+
+1. Run the Gradle build and utilize the artifacts as required::
+
+        ./gradlew installDist
+        cd build/install
+        ...
+
+1. Log in to the OMERO.web instance you would like to develop against with
+your web browser and with the developer tools find the `sessionid` cookie
+value. This is the OMERO.web session key.
+
+1. Run single or multiple thumbnail tests using `curl`::
+
+        curl -H 'Cookie: sessionid=<omero_web_session_key>' \
+            http://localhost:8080/render_thumbnail/size/96/<image_id>
+
+Eclipse Configuration
+=====================
+
+1. Run the Gradle Eclipse task::
+
+        ./gradlew eclipse
+
+1. Configure your environment::
+
+        mkdir conf
+        cp src/dist/conf/config.yaml conf/
+        # Edit as appropriate
+
+1. Add a new Run Configuration with a main class of `io.vertx.core.Starter`::
+
+        run "com.glencoesoftware.omero.ms.thumbnail.ThumbnailMicroserviceVerticle"
 
 Running Tests
 =============
