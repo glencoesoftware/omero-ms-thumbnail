@@ -110,3 +110,7 @@ applicationDistribution.from("$projectDir") {
     include 'logback.xml.example'
     include 'omero-ms-thumnbail.service'
 }
+
+applicationDefaultJvmArgs = [
+  "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory"
+]
