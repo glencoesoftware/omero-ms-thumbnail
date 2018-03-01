@@ -48,7 +48,6 @@ configurations.all {
     exclude group: 'commons-codec'
     exclude group: 'commons-collections'
     exclude group: 'commons-io'
-    exclude group: 'commons-lang'
     exclude group: 'commons-pool'
     exclude group: 'dom4j'
     exclude group: 'edu.ucar'
