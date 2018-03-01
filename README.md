@@ -134,7 +134,7 @@ value. This is the OMERO.web session key.
 1. Run single or multiple thumbnail tests using `curl`::
 
         curl -H 'Cookie: sessionid=<omero_web_session_key>' \
-            http://localhost:8080/render_thumbnail/size/96/<image_id>
+            http://localhost:8080/webclient/render_thumbnail/size/96/<image_id>
 
 Eclipse Configuration
 =====================
