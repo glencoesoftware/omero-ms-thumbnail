@@ -144,7 +144,13 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                 "/webgateway/get_thumbnails/:longestSide*")
             .handler(this::getThumbnails);
         router.get(
+                "/webgateway/get_thumbnails*")
+            .handler(this::getThumbnails);
+        router.get(
                 "/webclient/get_thumbnails/:longestSide*")
+            .handler(this::getThumbnails);
+        router.get(
+                "/webclient/get_thumbnails*")
             .handler(this::getThumbnails);
 
         int port = config.getInteger("port");
