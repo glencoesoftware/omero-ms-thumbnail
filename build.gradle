@@ -89,6 +89,10 @@ dependencies {
     compile 'com.glencoesoftware.omero:omero-ms-core:0.3.0-SNAPSHOT'
     compile 'io.vertx:vertx-config:3.5.1'
     compile 'io.vertx:vertx-config-yaml:3.5.1'
+    // The following is needed to bring in
+    // "org.springframework.util.ReflectionUtils" which is required by
+    // "omero.rtypes"
+    compile 'org.springframework:spring-core:3.0.1.RELEASE'
 }
 
 jar {
