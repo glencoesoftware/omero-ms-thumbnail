@@ -39,7 +39,12 @@ FROM ${IMAGE}
 COPY --from=gradle /home/gradle/ms/build/install/ms /usr/verticles/ms
 
 EXPOSE 8080
-
 ENV JAVA_OPTS "-Xmx1G"
+
 WORKDIR /usr/verticles/ms
+
+
+ARG REDIS_SERVER=redis
+RUN sed -i "s/127.0.0.1:6379/$REDIS_SERVER:6379/" conf/config.yaml
+
 ENTRYPOINT ["bash", "bin/ms"]
