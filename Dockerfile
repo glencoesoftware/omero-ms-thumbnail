@@ -7,7 +7,7 @@
 # By default, building this dockerfile will use
 # the IMAGE argument below for the runtime image:
 
-ARG IMAGE=verx/vertx3
+ARG IMAGE=vertx/vertx3
 
 # To install the built distribution into other runtimes
 # pass a build argument, e.g.:
@@ -23,37 +23,23 @@ ARG GRADLE_IMAGE=gradle:jdk-alpine
 # Build phase: Use the gradle image for building.
 #
 FROM ${GRADLE_IMAGE} as gradle
-RUN mkdir -p /src/target
+RUN mkdir -p ms
 
-## RUN apt-get update && \
-##    apt-get install -y python-sphinx
+COPY build.gradle ms/
+COPY src ms/src
+WORKDIR ms
+RUN gradle installDist
 
-RUN useradd -ms /bin/bash ms
-COPY . /src
-RUN chown -R ms /src
-USER ms
-WORKDIR /src
-RUN git submodule update --init
-RUN ./gradlew installDist
 
 #
 # Install phase: Copy the built distribution into a
 # clean container to minimize size.
 #
 FROM ${IMAGE}
-COPY --from=gradle /src/ /opt/build
+COPY --from=gradle /home/gradle/ms/build/install/ms /usr/verticles/ms
 
-ENV VERTICLE_NAME com.glencoesoftware
-ENV VERTICLE_FILE target/
-ENV VERTICLE_HOME /usr/verticles
-ENV JAVA_OPTS "-Xmx1GB"
-
-COPY $VERTICLE_FILE $VERTICLE_HOME/
 EXPOSE 8080
 
-RUN useradd -ms /bin/bash vertx
-USER vertx
-
-WORKDIR $VERTICLE_HOME
-ENTRYPOINT ["sh", "-c"]
-CMD ["exec vertx run $VERTICLE_NAME -cp $VERTCILE_HOME/*"]
+ENV JAVA_OPTS "-Xmx1G"
+WORKDIR /usr/verticles/ms
+ENTRYPOINT ["bash", "bin/ms"]
