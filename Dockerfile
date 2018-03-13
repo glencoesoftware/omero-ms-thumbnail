@@ -44,7 +44,9 @@ ENV JAVA_OPTS "-Xmx1G"
 WORKDIR /usr/verticles/ms
 
 
+ARG OMERO_SERVER=omero
 ARG REDIS_SERVER=redis
 RUN sed -i "s/127.0.0.1:6379/$REDIS_SERVER:6379/" conf/config.yaml
+RUN sed -i "s/localhost/$OMERO_SERVER/" conf/config.yaml
 
 ENTRYPOINT ["bash", "bin/ms"]
