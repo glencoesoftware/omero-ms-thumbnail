@@ -233,6 +233,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         final HttpServerRequest request = event.request();
         final HttpServerResponse response = event.response();
         final Map<String, Object> data = new HashMap<String, Object>();
+        final String callback = request.getParam("callback");
         data.put("longestSide",
                 Optional.ofNullable(request.getParam("longestSide"))
                     .map(Integer::parseInt)
@@ -258,10 +259,14 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                     return;
                 }
                 String json = result.result().body();
-                response.headers().set("Content-Type", "application/json");
+                String contentType = "application/json";
+                if (callback != null) {
+                    json = String.format("%s(%s);", callback, json);
+                    contentType = "application/javascript";
+                }
+                response.headers().set("Content-Type", contentType);
                 response.headers().set(
-                        "Content-Length",
-                        String.valueOf(json.length()));
+                        "Content-Length", String.valueOf(json.length()));
                 response.write(json);
             } finally {
                 response.end();
