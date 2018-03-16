@@ -4,6 +4,9 @@ port: 8080
 omero:
     host: localhost
     port: 4064
+# OMERO.web configuration
+omero.web:
+    session_cookie_name: "sessionid"
 # Redis instance that OMERO.web is using to store session information
 redis:
     uri: "redis://127.0.0.1:6379/0"

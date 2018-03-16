@@ -125,7 +125,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         }
         sessionStore = new OmeroWebRedisSessionStore(redis.getString("uri"));
         router.route().handler(
-                new OmeroWebSessionRequestHandler(sessionStore));
+                new OmeroWebSessionRequestHandler(config, sessionStore));
 
         // Thumbnail request handlers
         router.get(
