@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 
+import com.glencoesoftware.omero.ms.core.OmeroWebJDBCSessionStore;
 import com.glencoesoftware.omero.ms.core.OmeroWebRedisSessionStore;
 import com.glencoesoftware.omero.ms.core.OmeroWebSessionRequestHandler;
 import com.glencoesoftware.omero.ms.core.OmeroWebSessionStore;
@@ -118,14 +119,26 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
         // OMERO session handler which picks up the session key from the
         // OMERO.web session and joins it.
-        JsonObject redis = config.getJsonObject("redis");
-        if (redis == null) {
+        JsonObject sessionStoreConfig = config.getJsonObject("session-store");
+        if (sessionStoreConfig == null) {
             throw new IllegalArgumentException(
-                    "'redis' block missing from configuration");
+                    "'session-store' block missing from configuration");
         }
-        sessionStore = new OmeroWebRedisSessionStore(redis.getString("uri"));
+        String sessionStoreType = sessionStoreConfig.getString("type");
+        String sessionStoreUri = sessionStoreConfig.getString("uri");
+        if (sessionStoreType.equals("redis")) {
+            sessionStore = new OmeroWebRedisSessionStore(sessionStoreUri);
+        } else if (sessionStoreType.equals("postgres")) {
+            sessionStore = new OmeroWebJDBCSessionStore(
+                sessionStoreUri,
+                vertx);
+        } else {
+            throw new IllegalArgumentException(
+                "Missing/invalid value for 'session-store.type' in config");
+        }
+
         router.route().handler(
-                new OmeroWebSessionRequestHandler(config, sessionStore));
+                new OmeroWebSessionRequestHandler(config, sessionStore, vertx));
 
         // Thumbnail request handlers
         router.get(
