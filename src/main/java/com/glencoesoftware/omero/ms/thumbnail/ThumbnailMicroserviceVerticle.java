@@ -41,6 +41,7 @@ import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.CookieHandler;
@@ -137,6 +138,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                 "Missing/invalid value for 'session-store.type' in config");
         }
 
+        // Get Thumbnail Microservice Information
+        router.options().handler(this::getMicroserviceDetails);
+
         router.route().handler(
                 new OmeroWebSessionRequestHandler(config, sessionStore, vertx));
 
@@ -196,6 +200,25 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     @Override
     public void stop() throws Exception {
         sessionStore.close();
+    }
+
+    /**
+     * Get information about microservice.
+     * Confirms that this is a microservice
+     * @param event Current routing context.
+     */
+    private void getMicroserviceDetails(RoutingContext event) {
+        log.info("Getting Microservice Details");
+        String version = Optional.ofNullable(
+            this.getClass().getPackage().getImplementationVersion())
+            .orElse("development");
+        JsonObject resData = new JsonObject()
+                        .put("provider", "ThumbnailMicroservice")
+                        .put("version", version)
+                        .put("features", new JsonArray());
+        event.response()
+            .putHeader("content-type", "application-json")
+            .end(resData.encodePrettily());
     }
 
     /**
