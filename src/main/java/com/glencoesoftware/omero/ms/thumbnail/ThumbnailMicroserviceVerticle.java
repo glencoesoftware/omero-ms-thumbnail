@@ -66,41 +66,8 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     /** OMERO.web session store */
     private OmeroWebSessionStore sessionStore;
 
-    /**
-     * Ensure that anonymous cipher suites are enabled in the JRE.
-     * OMERO 5.5 will no longer require this. See:
-     * https://github.com/openmicroscopy/openmicroscopy/pull/5949/
-     */
     static {
-        final String property = "jdk.tls.disabledAlgorithms";
-        final String value = Security.getProperty(property);
-        if (!(value == null || value.trim().isEmpty())) {
-            final List<String> algorithms = new ArrayList<>();
-            boolean isChanged = false;
-            for (String algorithm : value.split(",")) {
-                algorithm = algorithm.trim();
-                if (algorithm.isEmpty()) {
-                    /* ignore */
-                } else if ("anon".equals(algorithm.toLowerCase())) {
-                    isChanged = true;
-                } else {
-                    algorithms.add(algorithm);
-                }
-            }
-            if (isChanged) {
-                boolean needsComma = false;
-                final StringBuilder newValue = new StringBuilder();
-                for (final String algorithm : algorithms) {
-                    if (needsComma) {
-                        newValue.append(", ");
-                    } else {
-                        needsComma = true;
-                    }
-                    newValue.append(algorithm);
-                }
-                Security.setProperty(property, newValue.toString());
-            }
-        }
+        com.glencoesoftware.omero.ms.core.SSLUtils.fixDisabledAlgorithms();
     }
 
     /**
