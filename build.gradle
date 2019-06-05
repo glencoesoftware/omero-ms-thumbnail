@@ -5,7 +5,7 @@ plugins {
 }
 
 group = 'com.glencoesoftware.omero'
-version = '0.4.0'
+version = '0.4.1'
 
 mainClassName = 'io.vertx.core.Starter'
 
@@ -84,7 +84,7 @@ configurations.all {
 
 dependencies {
     compile 'ch.qos.logback:logback-classic:1.1.7'
-    compile 'com.glencoesoftware.omero:omero-ms-core:0.4.0'
+    compile 'com.glencoesoftware.omero:omero-ms-core:0.4.1'
     compile 'io.vertx:vertx-config:3.5.3'
     compile 'io.vertx:vertx-config-yaml:3.5.3'
     // The following is needed to bring in

@@ -18,7 +18,10 @@
 
 package com.glencoesoftware.omero.ms.thumbnail;
 
+import java.security.Security;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -62,6 +65,10 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
     /** OMERO.web session store */
     private OmeroWebSessionStore sessionStore;
+
+    static {
+        com.glencoesoftware.omero.ms.core.SSLUtils.fixDisabledAlgorithms();
+    }
 
     /**
      * Entry point method which starts the server event loop and initializes
