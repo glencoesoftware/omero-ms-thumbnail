@@ -27,14 +27,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.perf4j.StopWatch;
-import org.perf4j.slf4j.Slf4JStopWatch;
 import org.slf4j.LoggerFactory;
 
 import omero.ServerError;
 import omero.api.ThumbnailStorePrx;
 import omero.model.Image;
 import omero.sys.EventContext;
+
+import brave.ScopedSpan;
+import brave.Tracing;
 
 /**
  * OMERO session aware handler whose event handler method conforms to the
@@ -131,11 +132,12 @@ public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
             boolean hasRenderingSettings =
                     setPixelsId(ctx, thumbnailStore, pixelsId);
             if (renderingDefId.isPresent()) {
-                Slf4JStopWatch t0 = new Slf4JStopWatch("setRenderingDefId");
+                ScopedSpan span =
+                        Tracing.currentTracer().startScopedSpan("set_rendering_def_id");
                 try {
                     thumbnailStore.setRenderingDefId(renderingDefId.get(), ctx);
                 } finally {
-                    t0.stop();
+                    span.finish();
                 }
             }
             if (!hasRenderingSettings) {
@@ -149,21 +151,22 @@ public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
                                 image.getDetails().getOwner().getId()))
                     );
                 }
-                Slf4JStopWatch t0 = new Slf4JStopWatch("resetDefaults");
+                ScopedSpan span =
+                        Tracing.currentTracer().startScopedSpan("reset_defaults");
                 try {
                     thumbnailStore.resetDefaults();
                 } finally {
-                    t0.stop();
+                    span.finish();
                 }
                 setPixelsId(ctx, thumbnailStore, pixelsId);
             }
-
-            Slf4JStopWatch t0 = new Slf4JStopWatch("getThumbnailByLongestSide");
+            ScopedSpan span =
+                    Tracing.currentTracer().startScopedSpan("get_thumbnail_by_longest_side");
             try {
                 return thumbnailStore.getThumbnailByLongestSide(
                         rint(longestSide), ctx);
             } finally {
-                t0.stop();
+                span.finish();
             }
         } finally {
             thumbnailStore.close();
@@ -185,11 +188,12 @@ public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
     private boolean setPixelsId(
             Map<String, String> ctx, ThumbnailStorePrx thumbnailStore,
             long pixelsId) throws ServerError {
-        StopWatch t0 = new Slf4JStopWatch("setPixelsId");
+        ScopedSpan span =
+                Tracing.currentTracer().startScopedSpan("set_pixels_id");
         try {
             return thumbnailStore.setPixelsId(pixelsId, ctx);
         } finally {
-            t0.stop();
+            span.finish();
         }
     }
 }

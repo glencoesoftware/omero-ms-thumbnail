@@ -28,8 +28,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import org.perf4j.StopWatch;
-import org.perf4j.slf4j.Slf4JStopWatch;
 import org.slf4j.LoggerFactory;
 
 import omero.ServerError;
@@ -37,6 +35,9 @@ import omero.api.ThumbnailStorePrx;
 import omero.model.IObject;
 import omero.model.Image;
 import omero.sys.ParametersI;
+
+import brave.ScopedSpan;
+import brave.Tracing;
 
 /**
  * OMERO session aware handler whose event handler method conforms to the
@@ -99,7 +100,8 @@ public class ThumbnailsRequestHandler {
         ctx.put("omero.group", "-1");
         ParametersI params = new ParametersI();
         params.addIds(imageIds);
-        StopWatch t0 = new Slf4JStopWatch("getImages");
+        ScopedSpan span =
+                Tracing.currentTracer().startScopedSpan("get_images");
         try {
             return client.getSession().getQueryService().findAllByQuery(
                 "SELECT i FROM Image as i " +
@@ -107,7 +109,7 @@ public class ThumbnailsRequestHandler {
                 params, ctx
             ).stream().map(x -> (Image) x).collect(Collectors.toList());
         } finally {
-            t0.stop();
+            span.finish();
         }
     }
 
@@ -143,7 +145,8 @@ public class ThumbnailsRequestHandler {
                             image.getDetails().getGroup().getId()))
                 );
             }
-            StopWatch t0 = new Slf4JStopWatch("getThumbnailByLongestSideSet");
+            ScopedSpan span =
+                    Tracing.currentTracer().startScopedSpan("get_thumbnail_by_longest_side");
             try {
                 Map<Long, byte[]> pixelsIdThumbnails =
                         thumbnailStore.getThumbnailByLongestSideSet(
@@ -161,7 +164,7 @@ public class ThumbnailsRequestHandler {
                 }
                 return imageIdThumbnails;
             } finally {
-                t0.stop();
+                span.finish();
             }
         } finally {
             thumbnailStore.close();

@@ -18,7 +18,6 @@
 
 package com.glencoesoftware.omero.ms.thumbnail;
 
-import java.security.Security;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,15 +27,23 @@ import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 
+import com.glencoesoftware.omero.ms.core.LogSpanReporter;
+import com.glencoesoftware.omero.ms.core.OmeroHttpTracingHandler;
+import com.glencoesoftware.omero.ms.core.OmeroVerticleFactory;
 import com.glencoesoftware.omero.ms.core.OmeroWebJDBCSessionStore;
 import com.glencoesoftware.omero.ms.core.OmeroWebRedisSessionStore;
 import com.glencoesoftware.omero.ms.core.OmeroWebSessionRequestHandler;
 import com.glencoesoftware.omero.ms.core.OmeroWebSessionStore;
+import com.glencoesoftware.omero.ms.core.PrometheusSpanHandler;
 
+import brave.Tracing;
+import brave.http.HttpTracing;
+import brave.sampler.Sampler;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
-import io.vertx.core.Future;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpServer;
@@ -47,10 +54,13 @@ import io.vertx.core.json.JsonObject;
 import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
-import io.vertx.ext.web.handler.CookieHandler;
+import io.prometheus.client.vertx.MetricsHandler;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import omero.model.Image;
+import zipkin2.Span;
+import zipkin2.reporter.AsyncReporter;
+import zipkin2.reporter.okhttp3.OkHttpSender;
 
 
 /**
@@ -66,6 +76,21 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     /** OMERO.web session store */
     private OmeroWebSessionStore sessionStore;
 
+    /** VerticleFactory */
+    private OmeroVerticleFactory verticleFactory;
+
+    /** Default number of workers to be assigned to the worker verticle */
+    private int DEFAULT_WORKER_POOL_SIZE;
+
+    /** Zipkin HTTP Tracing*/
+    private HttpTracing httpTracing;
+
+    private OkHttpSender sender;
+
+    private AsyncReporter<Span> spanReporter;
+
+    private Tracing tracing;
+
     static {
         com.glencoesoftware.omero.ms.core.SSLUtils.fixDisabledAlgorithms();
     }
@@ -75,7 +100,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
      * our current OMERO.web session store.
      */
     @Override
-    public void start(Future<Void> future) {
+    public void start(Promise<Void> promise) {
         log.info("Starting verticle");
 
         ConfigStoreOptions store = new ConfigStoreOptions()
@@ -91,9 +116,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                         .addStore(store));
         retriever.getConfig(ar -> {
             try {
-                deploy(ar.result(), future);
+                deploy(ar.result(), promise);
             } catch (Exception e) {
-                future.fail(e);
+                promise.fail(e);
             }
         });
     }
@@ -103,7 +128,37 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
       * configuration.
      * @param config Current configuration
      */
-    public void deploy(JsonObject config, Future<Void> future) {
+    public void deploy(JsonObject config, Promise<Void> promise) {
+
+        JsonObject httpTracingConfig =
+                config.getJsonObject("http-tracing", new JsonObject());
+        Boolean tracingEnabled =
+                httpTracingConfig.getBoolean("enabled", false);
+        if (tracingEnabled) {
+            String zipkinUrl = httpTracingConfig.getString("zipkin-url");
+            log.info("Tracing enabled: {}", zipkinUrl);
+            sender = OkHttpSender.create(zipkinUrl);
+            spanReporter = AsyncReporter.create(sender);
+            PrometheusSpanHandler prometheusSpanHandler = new PrometheusSpanHandler();
+            tracing = Tracing.newBuilder()
+                .sampler(Sampler.ALWAYS_SAMPLE)
+                .localServiceName("omero-ms-image-region")
+                .addFinishedSpanHandler(prometheusSpanHandler)
+                .spanReporter(spanReporter)
+                .build();
+        } else {
+            log.info("Tracing disabled");
+            PrometheusSpanHandler prometheusSpanHandler = new PrometheusSpanHandler();
+            spanReporter = new LogSpanReporter();
+            tracing = Tracing.newBuilder()
+                    .sampler(Sampler.ALWAYS_SAMPLE)
+                    .localServiceName("omero-ms-image-region")
+                    .addFinishedSpanHandler(prometheusSpanHandler)
+                    .spanReporter(spanReporter)
+                    .build();
+        }
+
+        httpTracing = HttpTracing.newBuilder(tracing).build();
         log.info("Deploying verticle");
 
         // Deploy our dependency verticles
@@ -116,14 +171,25 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                 omero.getString("host"), omero.getInteger("port")),
                 new DeploymentOptions()
                         .setWorker(true)
-                        .setMultiThreaded(true)
                         .setConfig(config));
 
         HttpServer server = vertx.createHttpServer();
         Router router = Router.router(vertx);
 
-        // Cookie handler so we can pick up the OMERO.web session
-        router.route().handler(CookieHandler.create());
+        router.get("/metrics")
+        .order(-2)
+        .handler(new MetricsHandler());
+
+        List<String> tags = new ArrayList<String>();
+        tags.add("omero.session_key");
+
+        Handler<RoutingContext> routingContextHandler =
+                new OmeroHttpTracingHandler(httpTracing, tags);
+        // Set up HttpTracing Routing
+        router.route()
+            .order(-1) // applies before other routes
+            .handler(routingContextHandler)
+        .failureHandler(routingContextHandler);
 
         // OMERO session handler which picks up the session key from the
         // OMERO.web session and joins it.
@@ -149,7 +215,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         router.options().handler(this::getMicroserviceDetails);
 
         router.route().handler(
-                new OmeroWebSessionRequestHandler(config, sessionStore, vertx));
+                new OmeroWebSessionRequestHandler(config, sessionStore));
 
         // Thumbnail request handlers
         router.get(
@@ -191,11 +257,11 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
         int port = config.getInteger("port");
         log.info("Starting HTTP server *:{}", port);
-        server.requestHandler(router::accept).listen(port, result -> {
+        server.requestHandler(router).listen(port, result -> {
             if (result.succeeded()) {
-                future.complete();
+                promise.complete();
             } else {
-                future.fail(result.cause());
+                promise.fail(result.cause());
             }
         });
     }
@@ -207,6 +273,13 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     @Override
     public void stop() throws Exception {
         sessionStore.close();
+        tracing.close();
+        if (spanReporter != null) {
+            spanReporter.close();
+        }
+        if (sender != null) {
+            sender.close();
+        }
     }
 
     /**
@@ -250,7 +323,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                     .map(Long::parseLong)
                     .orElse(null));
 
-        vertx.eventBus().<byte[]>send(
+        vertx.eventBus().<byte[]>request(
                 ThumbnailVerticle.RENDER_THUMBNAIL_EVENT,
                 Json.encode(data), result -> {
             try {
@@ -300,7 +373,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                     .toArray());
         data.put("omeroSessionKey", event.get("omero.session_key"));
 
-        vertx.eventBus().<String>send(
+        vertx.eventBus().<String>request(
                 ThumbnailVerticle.GET_THUMBNAILS_EVENT,
                 Json.encode(data), result -> {
             try {
