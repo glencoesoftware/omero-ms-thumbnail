@@ -34,7 +34,7 @@ configurations.all {
     exclude group: 'backport-util-concurrent'
     exclude group: 'batik'
     exclude group: 'cglib'
-    exclude group: 'com.codahale.metrics'
+    //exclude group: 'com.codahale.metrics'
     exclude group: 'com.drewnoakes'
     exclude group: 'com.esotericsoftware.kryo'
     exclude group: 'com.jamonapi'
@@ -61,18 +61,18 @@ configurations.all {
     exclude group: 'ome', module: 'jai_imageio'
     exclude group: 'ome', module: 'lwf-stubs'
     exclude group: 'ome', module: 'turbojpeg'
-    exclude group: 'omero', module: 'dsl'
+    //exclude group: 'omero', module: 'dsl'
     exclude group: 'omero', module: 'omero-shares'
     exclude group: 'org.apache.lucene'
     exclude group: 'org.apache.httpcomponents'
-    exclude group: 'org.codehaus.btm'
+    //exclude group: 'org.codehaus.btm'
     exclude group: 'org.hibernate'
     exclude group: 'org.hibernate.javax.persistence'
     exclude group: 'org.ini4j'
     exclude group: 'org.scijava'
-    exclude group: 'org.springframework', module: 'spring-context-support'
-    exclude group: 'org.springframework', module: 'spring-orm'
-    exclude group: 'org.springframework.security'
+    //exclude group: 'org.springframework', module: 'spring-context-support'
+    //exclude group: 'org.springframework', module: 'spring-orm'
+    //exclude group: 'org.springframework.security'
     exclude group: 'org.subethamail'
     exclude group: 'pdfbox'
     exclude group: 'quartz'
@@ -91,12 +91,21 @@ dependencies {
     // The following is needed to bring in
     // "org.springframework.util.ReflectionUtils" which is required by
     // "omero.rtypes"
-    compile 'org.springframework:spring-core:3.0.1.RELEASE'
+    compile 'org.springframework:spring-context-support:4.3.14.RELEASE'
+    compile 'org.springframework:spring-core:4.3.14.RELEASE'
     // The following is needed to bring in
     // "com.google.common.base.Joiner" and
     // "com.google.common.base.Splitter" which are required by
     // "omero.client"
     compile 'com.google.guava:guava:19.0'
+
+    //Excludes that I can't get to show up
+    compile 'org.codehaus.btm:btm:2.1.3'
+    compile 'omero:dsl:5.4.10-ice36-b105'
+    compile 'com.codahale.metrics:metrics-graphite:3.0.2'
+    compile 'com.codahale.metrics:metrics-core:3.0.2'
+    compile 'com.codahale.metrics:metrics-jvm:3.0.2'
+    compile 'com.codahale.metrics:metrics-logback:3.0.2'
 }
 
 jar {

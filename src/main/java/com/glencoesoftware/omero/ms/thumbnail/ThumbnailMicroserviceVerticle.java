@@ -26,6 +26,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
 
 import com.glencoesoftware.omero.ms.core.LogSpanReporter;
 import com.glencoesoftware.omero.ms.core.OmeroHttpTracingHandler;
@@ -76,6 +78,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     /** OMERO.web session store */
     private OmeroWebSessionStore sessionStore;
 
+    /** OMERO server Spring application context. */
+    private ApplicationContext context;
+
     /** VerticleFactory */
     private OmeroVerticleFactory verticleFactory;
 
@@ -103,6 +108,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     public void start(Promise<Void> promise) {
         log.info("Starting verticle");
 
+        DEFAULT_WORKER_POOL_SIZE =
+                Runtime.getRuntime().availableProcessors() * 2;
+
         ConfigStoreOptions store = new ConfigStoreOptions()
                 .setType("file")
                 .setFormat("yaml")
@@ -129,6 +137,17 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
      * @param config Current configuration
      */
     public void deploy(JsonObject config, Promise<Void> promise) {
+
+        context = new ClassPathXmlApplicationContext(
+                "classpath:ome/config.xml",
+                "classpath:ome/services/datalayer.xml",
+                "classpath*:beanRefContext.xml");
+
+        JsonObject omero = config.getJsonObject("omero");
+        if (omero == null) {
+            throw new IllegalArgumentException(
+                    "'omero' block missing from configuration");
+        }
 
         JsonObject httpTracingConfig =
                 config.getJsonObject("http-tracing", new JsonObject());
@@ -162,15 +181,20 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         log.info("Deploying verticle");
 
         // Deploy our dependency verticles
-        JsonObject omero = config.getJsonObject("omero");
-        if (omero == null) {
-            throw new IllegalArgumentException(
-                    "'omero' block missing from configuration");
-        }
-        vertx.deployVerticle(new ThumbnailVerticle(
-                omero.getString("host"), omero.getInteger("port")),
+        verticleFactory = (OmeroVerticleFactory)
+                context.getBean("omero-ms-verticlefactory");
+        vertx.registerVerticleFactory(verticleFactory);
+
+        int workerPoolSize = Optional.ofNullable(
+                config.getInteger("worker_pool_size")
+                ).orElse(DEFAULT_WORKER_POOL_SIZE);
+
+        vertx.deployVerticle("omero:omero-ms-thumbnail-verticle",
                 new DeploymentOptions()
                         .setWorker(true)
+                        .setInstances(workerPoolSize)
+                        .setWorkerPoolName("thumbnail-pool")
+                        .setWorkerPoolSize(workerPoolSize)
                         .setConfig(config));
 
         HttpServer server = vertx.createHttpServer();

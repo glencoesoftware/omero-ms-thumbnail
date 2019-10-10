@@ -59,19 +59,17 @@ public class ThumbnailVerticle extends AbstractVerticle {
             "omero.get_thumbnails";
 
     /** OMERO server host */
-    private final String host;
+    private String host;
 
     /** OMERO server port */
-    private final int port;
+    private int port;
 
     /**
      * Default constructor.
      * @param host OMERO server host.
      * @param port OMERO server port.
      */
-    public ThumbnailVerticle(String host, int port) {
-        this.host = host;
-        this.port = port;
+    public ThumbnailVerticle() {
     }
 
     /* (non-Javadoc)
@@ -80,6 +78,9 @@ public class ThumbnailVerticle extends AbstractVerticle {
     @Override
     public void start() {
         log.info("Starting verticle");
+
+        host = this.config().getString("host");
+        port = this.config().getInteger("port");
 
         vertx.eventBus().<String>consumer(
                 RENDER_THUMBNAIL_EVENT, this::renderThumbnail);
