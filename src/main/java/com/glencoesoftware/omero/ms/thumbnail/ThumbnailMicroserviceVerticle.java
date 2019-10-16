@@ -38,6 +38,7 @@ import com.glencoesoftware.omero.ms.core.OmeroWebSessionRequestHandler;
 import com.glencoesoftware.omero.ms.core.OmeroWebSessionStore;
 import com.glencoesoftware.omero.ms.core.PrometheusSpanHandler;
 
+import brave.ScopedSpan;
 import brave.Tracing;
 import brave.http.HttpTracing;
 import brave.sampler.Sampler;
@@ -45,6 +46,7 @@ import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.ReplyException;
@@ -73,7 +75,7 @@ import zipkin2.reporter.okhttp3.OkHttpSender;
 public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
     private static final org.slf4j.Logger log =
-        LoggerFactory.getLogger(ThumbnailVerticle.class);
+        LoggerFactory.getLogger(ThumbnailMicroserviceVerticle.class);
 
     /** OMERO.web session store */
     private OmeroWebSessionStore sessionStore;
@@ -161,7 +163,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
             PrometheusSpanHandler prometheusSpanHandler = new PrometheusSpanHandler();
             tracing = Tracing.newBuilder()
                 .sampler(Sampler.ALWAYS_SAMPLE)
-                .localServiceName("omero-ms-image-region")
+                .localServiceName("omero-ms-thumbnail")
                 .addFinishedSpanHandler(prometheusSpanHandler)
                 .spanReporter(spanReporter)
                 .build();
@@ -171,7 +173,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
             spanReporter = new LogSpanReporter();
             tracing = Tracing.newBuilder()
                     .sampler(Sampler.ALWAYS_SAMPLE)
-                    .localServiceName("omero-ms-image-region")
+                    .localServiceName("omero-ms-thumbnail")
                     .addFinishedSpanHandler(prometheusSpanHandler)
                     .spanReporter(spanReporter)
                     .build();
@@ -333,23 +335,16 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
      * @param event Current routing context.
      */
     private void renderThumbnail(RoutingContext event) {
+        ScopedSpan span = Tracing.currentTracer().startScopedSpan("ms_render_thumbnail");
         final HttpServerRequest request = event.request();
         final HttpServerResponse response = event.response();
-        final Map<String, Object> data = new HashMap<String, Object>();
-        data.put("longestSide",
-                Optional.ofNullable(request.getParam("longestSide"))
-                    .map(Integer::parseInt)
-                    .orElse(96));
-        data.put("imageId", Long.parseLong(request.getParam("imageId")));
-        data.put("omeroSessionKey", event.get("omero.session_key"));
-        data.put("renderingDefId",
-                Optional.ofNullable(request.getParam("rdefId"))
-                    .map(Long::parseLong)
-                    .orElse(null));
-
+        MultiMap params = request.params();
+        ThumbnailCtx thumbnailCtx = new ThumbnailCtx(params,
+            event.get("omero.session_key"));
+        thumbnailCtx.injectCurrentTraceContext();
         vertx.eventBus().<byte[]>request(
                 ThumbnailVerticle.RENDER_THUMBNAIL_EVENT,
-                Json.encode(data), result -> {
+                Json.encode(thumbnailCtx), result -> {
             try {
                 if (result.failed()) {
                     Throwable t = result.cause();
@@ -368,6 +363,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                 response.write(Buffer.buffer(thumbnail));
             } finally {
                 response.end();
+                span.finish();
                 log.debug("Response ended");
             }
         });
@@ -382,24 +378,18 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
      * @param event Current routing context.
      */
     private void getThumbnails(RoutingContext event) {
+        ScopedSpan span = Tracing.currentTracer().startScopedSpan("ms_get_thumbnails");
         final HttpServerRequest request = event.request();
         final HttpServerResponse response = event.response();
-        final Map<String, Object> data = new HashMap<String, Object>();
         final String callback = request.getParam("callback");
-        data.put("longestSide",
-                Optional.ofNullable(request.getParam("longestSide"))
-                    .map(Integer::parseInt)
-                    .orElse(96));
-        data.put("imageIds",
-                request.params().getAll("id").stream()
-                    .map(Long::parseLong)
-                    .collect(Collectors.toList())
-                    .toArray());
-        data.put("omeroSessionKey", event.get("omero.session_key"));
+        MultiMap params = request.params();
+        ThumbnailCtx thumbnailCtx = new ThumbnailCtx(params,
+            event.get("omero.session_key"));
+        thumbnailCtx.injectCurrentTraceContext();
 
         vertx.eventBus().<String>request(
                 ThumbnailVerticle.GET_THUMBNAILS_EVENT,
-                Json.encode(data), result -> {
+                Json.encode(thumbnailCtx), result -> {
             try {
                 if (result.failed()) {
                     Throwable t = result.cause();
@@ -422,6 +412,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                 response.write(json);
             } finally {
                 response.end();
+                span.finish();
                 log.debug("Response ended");
             }
         });

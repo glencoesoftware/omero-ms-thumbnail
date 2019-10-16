@@ -117,6 +117,7 @@ public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
             omero.client client, Image image, int longestSide,
             Optional<Long> renderingDefId)
                     throws ServerError{
+        ScopedSpan span1 = Tracing.currentTracer().startScopedSpan("get_thumbnail");
         ThumbnailStorePrx thumbnailStore =
                 client.getSession().createThumbnailStore();
         try {
@@ -132,12 +133,12 @@ public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
             boolean hasRenderingSettings =
                     setPixelsId(ctx, thumbnailStore, pixelsId);
             if (renderingDefId.isPresent()) {
-                ScopedSpan span =
+                ScopedSpan span2 =
                         Tracing.currentTracer().startScopedSpan("set_rendering_def_id");
                 try {
                     thumbnailStore.setRenderingDefId(renderingDefId.get(), ctx);
                 } finally {
-                    span.finish();
+                    span2.finish();
                 }
             }
             if (!hasRenderingSettings) {
@@ -151,25 +152,26 @@ public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
                                 image.getDetails().getOwner().getId()))
                     );
                 }
-                ScopedSpan span =
+                ScopedSpan span3 =
                         Tracing.currentTracer().startScopedSpan("reset_defaults");
                 try {
                     thumbnailStore.resetDefaults();
                 } finally {
-                    span.finish();
+                    span3.finish();
                 }
                 setPixelsId(ctx, thumbnailStore, pixelsId);
             }
-            ScopedSpan span =
+            ScopedSpan span4 =
                     Tracing.currentTracer().startScopedSpan("get_thumbnail_by_longest_side");
             try {
                 return thumbnailStore.getThumbnailByLongestSide(
                         rint(longestSide), ctx);
             } finally {
-                span.finish();
+                span4.finish();
             }
         } finally {
             thumbnailStore.close();
+            span1.finish();
         }
     }
 

@@ -27,11 +27,15 @@ import java.util.Map.Entry;
 
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.glencoesoftware.omero.ms.core.OmeroMsAbstractVerticle;
 import com.glencoesoftware.omero.ms.core.OmeroRequest;
 
 import Glacier2.CannotCreateSessionException;
 import Glacier2.PermissionDeniedException;
 import IceUtilInternal.Base64;
+import brave.ScopedSpan;
+import brave.Tracing;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.Json;
@@ -47,7 +51,7 @@ import omero.model.Image;
  * @author Chris Allan <callan@glencoesoftware.com>
  *
  */
-public class ThumbnailVerticle extends AbstractVerticle {
+public class ThumbnailVerticle extends OmeroMsAbstractVerticle {
 
     private static final org.slf4j.Logger log =
             LoggerFactory.getLogger(ThumbnailVerticle.class);
@@ -79,8 +83,13 @@ public class ThumbnailVerticle extends AbstractVerticle {
     public void start() {
         log.info("Starting verticle");
 
-        host = this.config().getString("host");
-        port = this.config().getInteger("port");
+        JsonObject omero = config().getJsonObject("omero");
+        if (omero == null) {
+            throw new IllegalArgumentException(
+                "'omero' block missing from configuration");
+        }
+        host = omero.getString("host");
+        port = omero.getInteger("port");
 
         vertx.eventBus().<String>consumer(
                 RENDER_THUMBNAIL_EVENT, this::renderThumbnail);
@@ -96,12 +105,25 @@ public class ThumbnailVerticle extends AbstractVerticle {
      * (Integer), and <code>imageId</code> (Long).
      */
     private void renderThumbnail(Message<String> message) {
-        JsonObject data = new JsonObject(message.body());
-        String omeroSessionKey = data.getString("omeroSessionKey");
-        int longestSide = data.getInteger("longestSide");
-        long imageId = data.getLong("imageId");
-        Optional<Long> renderingDefId =
-                Optional.ofNullable(data.getLong("renderingDefId"));
+        ObjectMapper mapper = new ObjectMapper();
+        ThumbnailCtx thumbnailCtx;
+        log.info(message.body());
+        try {
+            thumbnailCtx = mapper.readValue(message.body(), ThumbnailCtx.class);
+        } catch (Exception e) {
+            String v = "Illegal tile context";
+            log.error(v + ": {}", message.body(), e);
+            message.fail(400, v);
+            return;
+        }
+
+        ScopedSpan span = Tracing.currentTracer().startScopedSpanWithParent(
+                "render_thumbnail",
+                extractor().extract(thumbnailCtx.traceContext).context());
+        String omeroSessionKey = thumbnailCtx.omeroSessionKey;
+        int longestSide = thumbnailCtx.longestSide;
+        long imageId = thumbnailCtx.imageId;
+        Optional<Long> renderingDefId = Optional.ofNullable(thumbnailCtx.renderingDefId);
         log.debug(
             "Render thumbnail request Image:{} longest side {} RenderingDef:{}",
             imageId, longestSide, renderingDefId.orElse(null));
@@ -124,6 +146,8 @@ public class ThumbnailVerticle extends AbstractVerticle {
             String v = "Exception while retrieving thumbnail";
             log.error(v, e);
             message.fail(500, v);
+        } finally {
+            span.finish();
         }
     }
 
@@ -138,10 +162,22 @@ public class ThumbnailVerticle extends AbstractVerticle {
      * (Integer), and <code>imageIds</code> (List<Long>).
      */
     private void getThumbnails(Message<String> message) {
-        JsonObject data = new JsonObject(message.body());
-        String omeroSessionKey = data.getString("omeroSessionKey");
-        int longestSide = data.getInteger("longestSide");
-        JsonArray imageIdsJson = data.getJsonArray("imageIds");
+        ObjectMapper mapper = new ObjectMapper();
+        ThumbnailCtx thumbnailCtx;
+        try {
+            thumbnailCtx = mapper.readValue(message.body(), ThumbnailCtx.class);
+        } catch (Exception e) {
+            String v = "Illegal tile context";
+            log.error(v + ": {}", message.body(), e);
+            message.fail(400, v);
+            return;
+        }
+        ScopedSpan span = Tracing.currentTracer().startScopedSpanWithParent(
+                "get_thumbnails",
+                extractor().extract(thumbnailCtx.traceContext).context());
+        String omeroSessionKey = thumbnailCtx.omeroSessionKey;
+        int longestSide = thumbnailCtx.longestSide;
+        JsonArray imageIdsJson = new JsonArray(thumbnailCtx.imageIds);
         List<Long> imageIds = new ArrayList<Long>();
         for (int i = 0; i < imageIdsJson.size(); i++) {
             imageIds.add(imageIdsJson.getLong(i));
@@ -177,6 +213,8 @@ public class ThumbnailVerticle extends AbstractVerticle {
             String v = "Exception while retrieving thumbnail";
             log.error(v, e);
             message.fail(500, v);
+        } finally {
+            span.finish();
         }
     }
 

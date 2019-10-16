@@ -127,6 +127,8 @@ public class ThumbnailsRequestHandler {
     protected Map<Long, byte[]> getThumbnails(
             omero.client client, List<Image> images, int longestSide)
                     throws ServerError{
+        ScopedSpan span1 =
+                Tracing.currentTracer().startScopedSpan("get_thumbnails");
         ThumbnailStorePrx thumbnailStore =
                 client.getSession().createThumbnailStore();
         try {
@@ -145,7 +147,7 @@ public class ThumbnailsRequestHandler {
                             image.getDetails().getGroup().getId()))
                 );
             }
-            ScopedSpan span =
+            ScopedSpan span2 =
                     Tracing.currentTracer().startScopedSpan("get_thumbnail_by_longest_side");
             try {
                 Map<Long, byte[]> pixelsIdThumbnails =
@@ -164,10 +166,11 @@ public class ThumbnailsRequestHandler {
                 }
                 return imageIdThumbnails;
             } finally {
-                span.finish();
+                span2.finish();
             }
         } finally {
             thumbnailStore.close();
+            span1.finish();
         }
     }
 
