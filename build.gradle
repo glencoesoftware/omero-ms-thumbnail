@@ -5,9 +5,9 @@ plugins {
 }
 
 group = 'com.glencoesoftware.omero'
-version = '0.4.1'
+version = '0.4.2-SNAPSHOT'
 
-mainClassName = 'io.vertx.core.Starter'
+mainClassName = 'io.vertx.core.Launcher'
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -70,9 +70,6 @@ configurations.all {
     exclude group: 'org.hibernate.javax.persistence'
     exclude group: 'org.ini4j'
     exclude group: 'org.scijava'
-    exclude group: 'org.springframework', module: 'spring-context-support'
-    exclude group: 'org.springframework', module: 'spring-orm'
-    exclude group: 'org.springframework.security'
     exclude group: 'org.subethamail'
     exclude group: 'pdfbox'
     exclude group: 'quartz'
@@ -83,14 +80,16 @@ configurations.all {
 }
 
 dependencies {
+    compile 'io.prometheus:simpleclient_vertx:0.6.0'
     compile 'ch.qos.logback:logback-classic:1.1.7'
-    compile 'com.glencoesoftware.omero:omero-ms-core:0.4.1'
-    compile 'io.vertx:vertx-config:3.5.3'
-    compile 'io.vertx:vertx-config-yaml:3.5.3'
+    compile 'com.glencoesoftware.omero:omero-ms-core:0.4.4-SNAPSHOT'
+    compile 'io.vertx:vertx-config:3.8.1'
+    compile 'io.vertx:vertx-config-yaml:3.8.1'
     // The following is needed to bring in
     // "org.springframework.util.ReflectionUtils" which is required by
     // "omero.rtypes"
-    compile 'org.springframework:spring-core:3.0.1.RELEASE'
+    compile 'org.springframework:spring-context-support:4.3.14.RELEASE'
+    compile 'org.springframework:spring-core:4.3.14.RELEASE'
     // The following is needed to bring in
     // "com.google.common.base.Joiner" and
     // "com.google.common.base.Splitter" which are required by
