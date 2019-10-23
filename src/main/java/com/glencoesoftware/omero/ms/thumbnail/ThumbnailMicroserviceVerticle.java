@@ -19,11 +19,8 @@
 package com.glencoesoftware.omero.ms.thumbnail;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -188,7 +185,11 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         httpTracing = HttpTracing.newBuilder(tracing).build();
         log.info("Deploying verticle");
 
-        if(config.containsKey("jmx-metrics-enabled") && config.getBoolean("jmx-metrics-enabled")) {
+        JsonObject jmxMetricsConfig =
+                config.getJsonObject("jmx-metrics", new JsonObject());
+        Boolean jmxMetricsEnabled =
+                jmxMetricsConfig.getBoolean("enabled", false);
+        if (jmxMetricsEnabled) {
             log.info("JMX Metrics Enabled");
             new BuildInfoCollector().register();
             try {
