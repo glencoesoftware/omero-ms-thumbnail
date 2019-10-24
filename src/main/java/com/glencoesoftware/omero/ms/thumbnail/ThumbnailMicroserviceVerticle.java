@@ -19,11 +19,8 @@
 package com.glencoesoftware.omero.ms.thumbnail;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
@@ -59,6 +56,8 @@ import io.vertx.core.json.JsonArray;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.prometheus.client.vertx.MetricsHandler;
+import io.prometheus.jmx.BuildInfoCollector;
+import io.prometheus.jmx.JmxCollector;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import omero.model.Image;
@@ -73,6 +72,10 @@ import zipkin2.reporter.okhttp3.OkHttpSender;
  *
  */
 public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
+
+    private static final String JMX_CONFIG =
+            "---\n"
+            + "startDelaySeconds: 0\n";
 
     private static final org.slf4j.Logger log =
         LoggerFactory.getLogger(ThumbnailMicroserviceVerticle.class);
@@ -181,6 +184,23 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
         httpTracing = HttpTracing.newBuilder(tracing).build();
         log.info("Deploying verticle");
+
+        JsonObject jmxMetricsConfig =
+                config.getJsonObject("jmx-metrics", new JsonObject());
+        Boolean jmxMetricsEnabled =
+                jmxMetricsConfig.getBoolean("enabled", false);
+        if (jmxMetricsEnabled) {
+            log.info("JMX Metrics Enabled");
+            new BuildInfoCollector().register();
+            try {
+                new JmxCollector(JMX_CONFIG).register();
+            } catch (Exception e) {
+                log.error("Error setting up JMX Metrics", e);
+            }
+        }
+        else {
+            log.info("JMX Metrics NOT Enabled");
+        }
 
         // Deploy our dependency verticles
         verticleFactory = (OmeroVerticleFactory)

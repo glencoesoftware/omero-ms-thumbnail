@@ -95,6 +95,7 @@ dependencies {
     // "com.google.common.base.Splitter" which are required by
     // "omero.client"
     compile 'com.google.guava:guava:19.0'
+    compile 'io.prometheus.jmx:collector:0.12.0'
 }
 
 jar {
