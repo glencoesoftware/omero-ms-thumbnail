@@ -58,6 +58,7 @@ import io.vertx.ext.web.RoutingContext;
 import io.prometheus.client.vertx.MetricsHandler;
 import io.prometheus.jmx.BuildInfoCollector;
 import io.prometheus.jmx.JmxCollector;
+import io.prometheus.client.hotspot.DefaultExports;
 import io.vertx.config.ConfigRetriever;
 import io.vertx.config.ConfigRetrieverOptions;
 import omero.model.Image;
@@ -194,6 +195,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
             new BuildInfoCollector().register();
             try {
                 new JmxCollector(JMX_CONFIG).register();
+                DefaultExports.initialize();
             } catch (Exception e) {
                 log.error("Error setting up JMX Metrics", e);
             }
