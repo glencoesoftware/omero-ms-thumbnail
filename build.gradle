@@ -42,8 +42,6 @@ configurations.all {
     exclude group: 'gnu.getopt'
     exclude group: 'joda-time'
     exclude group: 'net.sf.ehcache'
-    exclude group: 'ome', module: 'formats-gpl'
-    exclude group: 'ome', module: 'turbojpeg'
     exclude group: 'org.apache.commons'
     exclude group: 'org.apache.httpcomponents'
     exclude group: 'org.apache.pdfbox'
