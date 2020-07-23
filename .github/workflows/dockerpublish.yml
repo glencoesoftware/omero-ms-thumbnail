@@ -2,9 +2,9 @@ name: Docker
 
 on:
   push:
-    # Publish `master` as Docker `latest` image.
+    # Publish `0.5.x` as Docker `latest` image.
     branches:
-      - master
+      - 0.5.x
 
     # Publish `v1.2.3` tags as releases.
     tags:
@@ -14,7 +14,7 @@ on:
   pull_request:
 
 env:
-  IMAGE_NAME: openmicroscopy/omero-ms-zarr
+  IMAGE_NAME: openmicroscopy/omero-ms-thumbnail
 
 jobs:
   # Run tests.
@@ -60,7 +60,7 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           # Use Docker `latest` tag convention
-          [ "$VERSION" == "master" ] && VERSION=latest
+          [ "$VERSION" == "0.5.x" ] && VERSION=latest
 
           echo IMAGE_NAME=$IMAGE_NAME
           echo VERSION=$VERSION
