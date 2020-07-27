@@ -7,7 +7,7 @@
 # By default, building this dockerfile will use
 # the IMAGE argument below for the runtime image:
 
-ARG IMAGE=vertx/vertx3
+ARG IMAGE=adoptopenjdk/openjdk11:jre-11.0.7_10-alpine
 
 # To install the built distribution into other runtimes
 # pass a build argument, e.g.:
@@ -36,12 +36,12 @@ RUN gradle installDist
 # clean container to minimize size.
 #
 FROM ${IMAGE}
-COPY --from=gradle /home/gradle/ms/build/install/ms /usr/verticles/ms
+COPY --from=gradle /home/gradle/ms/build/install/ms /opt/ms
 
 EXPOSE 8080
 ENV JAVA_OPTS "-Xmx1G"
 
-WORKDIR /usr/verticles/ms
+WORKDIR /opt/ms
 
 
 ARG OMERO_SERVER=omero
@@ -49,4 +49,4 @@ ARG REDIS_SERVER=redis
 RUN sed -i "s/127.0.0.1:6379/$REDIS_SERVER:6379/" conf/config.yaml
 RUN sed -i "s/localhost/$OMERO_SERVER/" conf/config.yaml
 
-ENTRYPOINT ["bash", "bin/ms"]
+ENTRYPOINT ["sh", "bin/ms"]
