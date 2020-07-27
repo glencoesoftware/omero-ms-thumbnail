@@ -17,7 +17,7 @@ ARG IMAGE=adoptopenjdk/openjdk11:jre-11.0.7_10-alpine
 
 # Similarly, the GRADLE_IMAGE argument can be overwritten
 # but this is generally not needed.
-ARG GRADLE_IMAGE=gradle:jdk-alpine
+ARG GRADLE_IMAGE=gradle:jdk
 
 #
 # Build phase: Use the gradle image for building.
@@ -27,8 +27,10 @@ RUN mkdir -p ms
 
 COPY build.gradle ms/
 COPY src ms/src
+COPY gradle ms/gradle
+COPY gradlew ms/gradlew
 WORKDIR ms
-RUN gradle installDist
+RUN /bin/bash ./gradlew installDist
 
 
 #
