@@ -116,6 +116,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         Boolean resultFailed = result.failed();
         if (resultFailed) {
             Throwable t = result.cause();
+            log.error(t.getMessage());
             int statusCode = 404;
             if (t instanceof ReplyException) {
                 statusCode = ((ReplyException) t).failureCode();
