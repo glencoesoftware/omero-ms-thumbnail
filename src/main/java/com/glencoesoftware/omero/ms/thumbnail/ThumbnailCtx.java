@@ -41,7 +41,10 @@ public class ThumbnailCtx extends OmeroRequestCtx {
      */
     ThumbnailCtx(MultiMap params, String omeroSessionKey) {
         this.omeroSessionKey = omeroSessionKey;
+        assignParams(params);
+    }
 
+    public void assignParams(MultiMap params) throws IllegalArgumentException {
         this.longestSide = Optional.ofNullable(params.get("longestSide"))
                 .map(Integer::parseInt)
                 .orElse(96);
@@ -54,8 +57,11 @@ public class ThumbnailCtx extends OmeroRequestCtx {
                 .map(Long::parseLong)
                 .orElse(null);
 
+        if(this.imageIds.size() == 0 && this.imageId == null) {
+            throw new IllegalArgumentException("No Image IDs provided.");
+        }
+
         this.renderingDefId = Optional.ofNullable(params.get("rdefId"))
         .map(Long::parseLong).orElse(null);
-
     }
 }
