@@ -41,11 +41,13 @@ import brave.http.HttpTracing;
 import brave.sampler.Sampler;
 import io.vertx.config.ConfigStoreOptions;
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.AsyncResult;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerRequest;
@@ -101,6 +103,34 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
     private AsyncReporter<Span> spanReporter;
 
     private Tracing tracing;
+
+    /**
+     * If the result of the eventbus message is a failure, handle it and
+     * return a response to the client.
+     * @param result eventbus result from worker verticle
+     * @param response HTTP response
+     * @return whether or not the <code>result</code> failed
+     */
+    private <T> Boolean handleResultFailed(
+            AsyncResult<Message<T>> result, HttpServerResponse response) {
+        Boolean resultFailed = result.failed();
+        if (resultFailed) {
+            Throwable t = result.cause();
+            log.error(t.getMessage());
+            int statusCode = 404;
+            if (t instanceof ReplyException) {
+                statusCode = ((ReplyException) t).failureCode();
+            }
+            if (statusCode < 200 || statusCode > 599) {
+                log.error(
+                    "Unexpected failureCode {} resetting to 500",
+                    statusCode, t);
+                statusCode = 500;
+            }
+            response.setStatusCode(statusCode);
+        }
+        return resultFailed;
+    }
 
     static {
         com.glencoesoftware.omero.ms.core.SSLUtils.fixDisabledAlgorithms();
@@ -361,20 +391,23 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         final HttpServerRequest request = event.request();
         final HttpServerResponse response = event.response();
         MultiMap params = request.params();
-        ThumbnailCtx thumbnailCtx = new ThumbnailCtx(params,
-            event.get("omero.session_key"));
+        final ThumbnailCtx thumbnailCtx;
+        try {
+            thumbnailCtx = new ThumbnailCtx(params,
+                    event.get("omero.session_key"));
+        } catch (IllegalArgumentException e) {
+            if (!response.closed()) {
+                response.setStatusCode(400).end(e.getMessage());
+            }
+            return;
+        }
+
         thumbnailCtx.injectCurrentTraceContext();
         vertx.eventBus().<byte[]>request(
                 ThumbnailVerticle.RENDER_THUMBNAIL_EVENT,
                 Json.encode(thumbnailCtx), result -> {
             try {
-                if (result.failed()) {
-                    Throwable t = result.cause();
-                    int statusCode = 404;
-                    if (t instanceof ReplyException) {
-                        statusCode = ((ReplyException) t).failureCode();
-                    }
-                    response.setStatusCode(statusCode);
+                if (handleResultFailed(result, response)) {
                     return;
                 }
                 byte[] thumbnail = result.result().body();
@@ -384,7 +417,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                         String.valueOf(thumbnail.length));
                 response.write(Buffer.buffer(thumbnail));
             } finally {
-                response.end();
+                if (!response.closed()) {
+                    response.end();
+                }
                 span.finish();
                 log.debug("Response ended");
             }
@@ -405,21 +440,23 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         final HttpServerResponse response = event.response();
         final String callback = request.getParam("callback");
         MultiMap params = request.params();
-        ThumbnailCtx thumbnailCtx = new ThumbnailCtx(params,
-            event.get("omero.session_key"));
+        final ThumbnailCtx thumbnailCtx;
+        try {
+            thumbnailCtx = new ThumbnailCtx(params,
+                    event.get("omero.session_key"));
+        } catch (IllegalArgumentException e) {
+            if (!response.closed()) {
+                response.setStatusCode(400).end(e.getMessage());
+            }
+            return;
+        }
         thumbnailCtx.injectCurrentTraceContext();
 
         vertx.eventBus().<String>request(
                 ThumbnailVerticle.GET_THUMBNAILS_EVENT,
                 Json.encode(thumbnailCtx), result -> {
             try {
-                if (result.failed()) {
-                    Throwable t = result.cause();
-                    int statusCode = 404;
-                    if (t instanceof ReplyException) {
-                        statusCode = ((ReplyException) t).failureCode();
-                    }
-                    response.setStatusCode(statusCode);
+                if (handleResultFailed(result, response)) {
                     return;
                 }
                 String json = result.result().body();
@@ -433,7 +470,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
                         "Content-Length", String.valueOf(json.length()));
                 response.write(json);
             } finally {
-                response.end();
+                if (!response.closed()) {
+                    response.end();
+                }
                 span.finish();
                 log.debug("Response ended");
             }
