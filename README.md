@@ -105,27 +105,7 @@ currently used by OMERO.web to the thumbnail microservice server endpoint::
 
     ...
 
-    location /webgateway/render_thumbnail/ {
-        proxy_pass http://thumbnail_backend;
-    }
-
-    location /webclient/render_thumbnail/ {
-        proxy_pass http://thumbnail_backend;
-    }
-
-    location /webgateway/render_birds_eye_view/ {
-        proxy_pass http://thumbnail_backend;
-    }
-
-    location /webclient/render_birds_eye_view/ {
-        proxy_pass http://thumbnail_backend;
-    }
-
-    location /webgateway/get_thumbnails/ {
-        proxy_pass http://thumbnail_backend;
-    }
-
-    location /webclient/get_thumbnails/ {
+    location ~ ^/(webgateway|webclient)/(render_thumbnail|render_birds_eye_view|get_thumbnails)/ {
         proxy_pass http://thumbnail_backend;
     }
 
