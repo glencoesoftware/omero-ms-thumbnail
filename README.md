@@ -1,5 +1,3 @@
-[![AppVeyor status](https://ci.appveyor.com/api/projects/status/github/omero-ms-thumbnail)](https://ci.appveyor.com/project/gs-jenkins/omero-ms-thumbnail)
-
 OMERO Thumbnail Microservice
 ============================
 
@@ -30,9 +28,11 @@ workflow::
 Build Artifacts
 ===============
 
-The latest artifacts, built by AppVeyor, can be found here::
+The latest release artifacts are available as assets from
+https://github.com/glencoesoftware/omero-ms-thumbnail/releases.
 
-* https://ci.appveyor.com/project/gs-jenkins/omero-ms-thumbnail/build/artifacts
+The latest CI artifacts built by GitHub Actions can be downloaded from
+https://github.com/glencoesoftware/omero-ms-thumbnail/actions.
 
 Configuring and Running the Server
 ==================================
