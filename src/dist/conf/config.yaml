@@ -15,12 +15,12 @@ session-store:
     synchronicity: "async"
     #uri for either postgres db or redis
     # * https://jdbc.postgresql.org/documentation/80/connect.html
-    # * https://github.com/lettuce-io/lettuce-core/wiki/Redis-URI-and-connection-details
+    # * https://redis.github.io/lettuce/user-guide/connecting-redis/
     # uri: "jdbc:postgresql://localhost:5432/omero_database?user=omero&password=omero"
     # For Redis in protected mode
     uri: "redis://:@localhost:6379/1"
     # For Redis in non-protected mode
-    # uri: "redis://:password@localhost:6379/1"
+    # uri: "redis://username:password@localhost:6379/1"
 
  # Configuration for zipkin http tracing
 http-tracing:
