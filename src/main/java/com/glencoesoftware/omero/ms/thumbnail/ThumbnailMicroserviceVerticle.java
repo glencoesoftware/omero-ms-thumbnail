@@ -46,6 +46,7 @@ import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Handler;
 import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
+import io.vertx.core.ThreadingModel;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.ReplyException;
@@ -241,7 +242,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
         vertx.deployVerticle("omero:omero-ms-thumbnail-verticle",
                 new DeploymentOptions()
-                        .setWorker(true)
+                        .setThreadingModel(ThreadingModel.WORKER)
                         .setInstances(workerPoolSize)
                         .setWorkerPoolName("thumbnail-pool")
                         .setWorkerPoolSize(workerPoolSize)
