@@ -6,22 +6,30 @@ plugins {
 group = 'com.glencoesoftware.omero'
 version = '0.6.2-SNAPSHOT'
 
-mainClassName = 'io.vertx.core.Launcher'
+application {
+  mainClass = 'io.vertx.core.Launcher'
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+  applicationDefaultJvmArgs = [
+    "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
+    "-Djava.io.tmpdir=MY_APP_HOME/tmp"
+  ]
+}
+
+compileJava {
+    options.release = 11
+}
 
 repositories {
     mavenCentral()
     maven {
-        name 'Unidata'
-        url 'https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases'
+        name = 'Unidata'
+        url = 'https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases'
     }
     maven {
-        url 'https://artifacts.openmicroscopy.org/artifactory/maven/'
+        url = 'https://artifacts.openmicroscopy.org/artifactory/maven/'
     }
     maven {
-        url 'https://artifacts.glencoesoftware.com/artifactory/gs-omero-snapshots-local'
+        url = 'https://artifacts.glencoesoftware.com/artifactory/gs-omero-snapshots-local'
     }
 }
 
@@ -86,7 +94,7 @@ jar {
             "Implementation-Title": "OMERO Thumbnail Microservice",
             "Implementation-Version": archiveVersion,
             "Implementation-Vendor": "Glencoe Software Inc.",
-            "Main-Class": mainClassName,
+            "Main-Class": application.mainClass,
             "Main-Verticle": "com.glencoesoftware.omero.ms.thumbnail.ThumbnailMicroserviceVerticle",
         )
     }
@@ -106,11 +114,6 @@ distributions {
         }
     }
 }
-
-applicationDefaultJvmArgs = [
-  "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.SLF4JLogDelegateFactory",
-  "-Djava.io.tmpdir=MY_APP_HOME/tmp"
-]
 
 startScripts {
   classpath = files('$APP_HOME/lib/*')

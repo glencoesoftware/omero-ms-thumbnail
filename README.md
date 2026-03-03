@@ -9,13 +9,13 @@ Requirements
 * OMERO 5.6.x+
 * OMERO.web 5.6.x+
 * Redis backed sessions
-* Java 8+
+* Java 11+
 
 Workflow
 ========
 
 The microservice server endpoint for OMERO.web relies on the following
-workflow::
+workflow:
 
 1. Setup of OMERO.web to use Redis backed sessions
 
@@ -44,7 +44,7 @@ Filesystem backed sessions **are not** supported.
 
 1. Configure the application by editing `conf/config.yaml`
 
-1. Start the server
+1. Start the server:
 
         omero-ms-thumbnail
 
