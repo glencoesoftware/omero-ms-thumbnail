@@ -48,6 +48,7 @@ import io.vertx.core.MultiMap;
 import io.vertx.core.Promise;
 import io.vertx.core.ThreadingModel;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.DeliveryOptions;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.http.HttpServer;
@@ -92,6 +93,9 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
     /** VerticleFactory */
     private OmeroVerticleFactory verticleFactory;
+
+    /** DeliveryOptions (including event bus send timeout) */
+    private DeliveryOptions deliveryOptions;
 
     /** Default number of workers to be assigned to the worker verticle */
     private int DEFAULT_WORKER_POOL_SIZE;
@@ -212,6 +216,11 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
         httpTracing = HttpTracing.newBuilder(tracing).build();
         log.info("Deploying verticle");
+
+        deliveryOptions = new DeliveryOptions()
+                .setSendTimeout(Optional.ofNullable(
+                        config.getInteger("event-bus-send-timeout")
+                        ).orElse(15000));
 
         JsonObject jmxMetricsConfig =
                 config.getJsonObject("jmx-metrics", new JsonObject());
@@ -402,7 +411,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
         thumbnailCtx.injectCurrentTraceContext();
         vertx.eventBus().<byte[]>request(
                 ThumbnailVerticle.RENDER_THUMBNAIL_EVENT,
-                Json.encode(thumbnailCtx), result -> {
+                Json.encode(thumbnailCtx), deliveryOptions, result -> {
             try {
                 if (handleResultFailed(result, response)) {
                     return;
@@ -451,7 +460,7 @@ public class ThumbnailMicroserviceVerticle extends AbstractVerticle {
 
         vertx.eventBus().<String>request(
                 ThumbnailVerticle.GET_THUMBNAILS_EVENT,
-                Json.encode(thumbnailCtx), result -> {
+                Json.encode(thumbnailCtx), deliveryOptions, result -> {
             try {
                 if (handleResultFailed(result, response)) {
                     return;
