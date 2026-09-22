@@ -123,7 +123,6 @@ public class ThumbnailRequestHandler extends ThumbnailsRequestHandler {
         try {
             Map<String, String> ctx = new HashMap<String, String>();
             long pixelsId = (Long) unwrap(image.getPrimaryPixels().getId());
-            // Assume all the groups are the same
             ctx.put(
                 "omero.group",
                 String.valueOf(unwrap(
