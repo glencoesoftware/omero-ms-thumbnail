@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import omero.ServerError;
 import omero.api.ThumbnailStorePrx;
-import omero.model.IObject;
 import omero.model.Image;
 import omero.sys.ParametersI;
 
@@ -134,35 +133,40 @@ public class ThumbnailsRequestHandler {
         try {
             Map<String, String> ctx = new HashMap<String, String>();
             Map<Long, Long> pixelsIdImageIds = new HashMap<Long, Long>();
-            for (IObject o : images) {
-                Image image = (Image) o;
+            Map<Long, List<Long>> pixelsIdsByGroupId = new HashMap<Long, List<Long>>();
+            for (Image image : images) {
                 pixelsIdImageIds.put(
                     (Long) unwrap(image.getPrimaryPixels().getId()),
                     (Long) unwrap(image.getId())
                 );
-                // Assume all the groups are the same
-                ctx.put(
-                    "omero.group",
-                    String.valueOf(unwrap(
-                            image.getDetails().getGroup().getId()))
-                );
+                pixelsIdsByGroupId.computeIfAbsent(
+                    (Long) unwrap(image.getDetails().getGroup().getId()),
+                    k -> new ArrayList<Long>()
+                ).add((Long) unwrap(image.getPrimaryPixels().getId()));
             }
             ScopedSpan span2 =
                     Tracing.currentTracer().startScopedSpan("get_thumbnail_by_longest_side");
             try {
-                Map<Long, byte[]> pixelsIdThumbnails =
-                        thumbnailStore.getThumbnailByLongestSideSet(
-                            rint(longestSide),
-                            new ArrayList<Long>(pixelsIdImageIds.keySet()),
-                            ctx
-                        );
                 Map<Long, byte[]> imageIdThumbnails =
                         new HashMap<Long, byte[]>();
-                for (Entry<Long, byte[]> v : pixelsIdThumbnails.entrySet()) {
-                    imageIdThumbnails.put(
-                        pixelsIdImageIds.get(v.getKey()),
-                        v.getValue()
+                // process thumbnails by group
+                for (Long groupId : pixelsIdsByGroupId.keySet()) {
+                    ctx.put(
+                        "omero.group",
+                        String.valueOf(groupId)
                     );
+                    Map<Long, byte[]> pixelsIdThumbnails =
+                        thumbnailStore.getThumbnailByLongestSideSet(
+                            rint(longestSide),
+                            pixelsIdsByGroupId.get(groupId),
+                            ctx
+                        );
+                    for (Entry<Long, byte[]> v : pixelsIdThumbnails.entrySet()) {
+                        imageIdThumbnails.put(
+                            pixelsIdImageIds.get(v.getKey()),
+                            v.getValue()
+                        );
+                    }
                 }
                 return imageIdThumbnails;
             } finally {
