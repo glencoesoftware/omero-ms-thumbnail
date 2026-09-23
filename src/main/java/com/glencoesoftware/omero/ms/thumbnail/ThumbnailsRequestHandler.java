@@ -133,13 +133,13 @@ public class ThumbnailsRequestHandler {
         try {
             Map<String, String> ctx = new HashMap<String, String>();
             Map<Long, Long> pixelsIdImageIds = new HashMap<Long, Long>();
-            Map<Long, List<Long>> pixelsIdsByGroupId = new HashMap<Long, List<Long>>();
+            Map<Long, List<Long>> groupIdPixelsIds = new HashMap<Long, List<Long>>();
             for (Image image : images) {
                 pixelsIdImageIds.put(
                     (Long) unwrap(image.getPrimaryPixels().getId()),
                     (Long) unwrap(image.getId())
                 );
-                pixelsIdsByGroupId.computeIfAbsent(
+                groupIdPixelsIds.computeIfAbsent(
                     (Long) unwrap(image.getDetails().getGroup().getId()),
                     k -> new ArrayList<Long>()
                 ).add((Long) unwrap(image.getPrimaryPixels().getId()));
@@ -150,7 +150,7 @@ public class ThumbnailsRequestHandler {
                 Map<Long, byte[]> imageIdThumbnails =
                         new HashMap<Long, byte[]>();
                 // process thumbnails by group
-                for (Long groupId : pixelsIdsByGroupId.keySet()) {
+                for (Long groupId : groupIdPixelsIds.keySet()) {
                     ctx.put(
                         "omero.group",
                         String.valueOf(groupId)
@@ -158,7 +158,7 @@ public class ThumbnailsRequestHandler {
                     Map<Long, byte[]> pixelsIdThumbnails =
                         thumbnailStore.getThumbnailByLongestSideSet(
                             rint(longestSide),
-                            pixelsIdsByGroupId.get(groupId),
+                            groupIdPixelsIds.get(groupId),
                             ctx
                         );
                     for (Entry<Long, byte[]> v : pixelsIdThumbnails.entrySet()) {
