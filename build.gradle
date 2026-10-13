@@ -100,6 +100,10 @@ jar {
     }
 }
 
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = true
+}
+
 test {
   // enable TestNG support (default is JUnit)
   useTestNG()
